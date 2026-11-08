@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-label="logbook — a private daily logbook for macOS">
+  <defs>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="70"/></filter>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000" flood-opacity="0.12"/></filter>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <clipPath id="frame"><rect width="1280" height="420" rx="28"/></clipPath>
+  </defs>
+  <g clip-path="url(#frame)">
+    <rect width="1280" height="420" fill="#0B0B0F"/>
+    <g filter="url(#blur)" opacity="0.55">
+      <circle cx="260" cy="110" r="210" fill="#5E5CE6"/>
+      <circle cx="1060" cy="90" r="200" fill="#BF5AF2"/>
+      <circle cx="900" cy="390" r="180" fill="#FF9F0A"/>
+      <circle cx="320" cy="400" r="160" fill="#40C8E0"/>
+      <circle cx="640" cy="200" r="120" fill="#30D158" opacity="0.5"/>
+    </g>
+    <g filter="url(#shadow)">
+      <rect x="140" y="60" width="1000" height="300" rx="36" fill="#FFFFFF" fill-opacity="0.06"/>
+    </g>
+    <rect x="140" y="60" width="1000" height="300" rx="36" fill="url(#sheen)" opacity="0.6"/>
+    <rect x="140.5" y="60.5" width="999" height="299" rx="35.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.14"/>
+
+    <text x="198" y="160" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Inter, Arial, sans-serif" font-size="84" font-weight="700" letter-spacing="-3" fill="#F5F5F7">logbook</text>
+    <text x="202" y="203" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Inter, Arial, sans-serif" font-size="24" font-weight="500" fill="#A1A1A6">a private daily logbook for macOS</text>
+
+    <g font-family="-apple-system, 'SF Mono', 'SF Pro Text', Menlo, monospace" font-size="20" font-weight="600">
+      <rect x="862" y="96" width="232" height="44" rx="22" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.14"/>
+      <circle cx="888" cy="118" r="6" fill="#5E5CE6"/>
+      <text x="904" y="125" fill="#F5F5F7" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif" font-weight="600">study</text>
+      <text x="1076" y="125" text-anchor="end" fill="#F5F5F7">1:12:40</text>
+    </g>
+
+    <g>
+      <rect x="200" y="246" width="880" height="14" rx="7" fill="#FFFFFF" fill-opacity="0.08"/>
+      <rect x="200" y="268" width="880" height="14" rx="7" fill="#FFFFFF" fill-opacity="0.08"/>
+      <rect x="200" y="290" width="880" height="14" rx="7" fill="#FFFFFF" fill-opacity="0.08"/>
+      <rect x="227.5" y="246" width="320.8" height="14" rx="7" fill="#BF5AF2"/>
+      <rect x="557.5" y="268" width="36.7" height="14" rx="7" fill="#5E5CE6"/>
+      <rect x="643.1" y="268" width="61.1" height="14" rx="7" fill="#5E5CE6"/>
+      <rect x="853.9" y="268" width="122.2" height="14" rx="7" fill="#5E5CE6"/>
+      <rect x="994.4" y="268" width="18.4" height="14" rx="7" fill="#5E5CE6"/>
+      <rect x="780.6" y="290" width="47.6" height="14" rx="7" fill="#40C8E0"/>
+      <g fill="#FF9F0A">
+        <circle cx="574" cy="320" r="5"/><circle cx="695" cy="320" r="5"/><circle cx="797.7" cy="320" r="5"/><circle cx="951.7" cy="320" r="5"/><circle cx="1021.3" cy="320" r="5"/>
+      </g>
+      <line x1="1028" y1="238" x2="1028" y2="330" stroke="#FF375F" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="1028" cy="238" r="4" fill="#FF375F"/>
+      <g font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#8E8E93">
+        <text x="200" y="345">00</text><text x="420" y="345" text-anchor="middle">06</text><text x="640" y="345" text-anchor="middle">12</text><text x="860" y="345" text-anchor="middle">18</text><text x="1080" y="345" text-anchor="end">24</text>
+      </g>
+    </g>
+  </g>
+</svg>
