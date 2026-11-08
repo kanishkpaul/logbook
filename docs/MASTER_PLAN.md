@@ -1,8 +1,8 @@
 # logbook — Master Plan
 
-*Version 1 · 8 November 2026 · status: planning, nothing built yet*
+*Version 1.1 · 8 November 2026 (added to-dos and time-blocking calendar) · status: planning, nothing built yet*
 
-A private, native macOS app that replaces the daily Apple Notes log. You enter everything yourself. The app does the arithmetic, shows trends, runs live timers and nudges you at the right moments. It looks and behaves like an Apple app, and it is built so features can be added for years.
+A private, native macOS app that replaces the daily Apple Notes log, and plans the day too: to-dos and a time-blocking calendar sit on the same timeline as what actually happened. You enter everything yourself. The app does the arithmetic, shows trends, runs live timers and nudges you at the right moments. It looks and behaves like an Apple app, and it is built so features can be added for years.
 
 Research behind every decision here: [research/stack-and-architecture-report.md](research/stack-and-architecture-report.md).
 
@@ -17,6 +17,7 @@ Research behind every decision here: [research/stack-and-architecture-report.md]
 5. **Your history is sacred.** Local SQLite, daily backups, full JSON/CSV export, every imported row keeps its original text, and every import can be undone.
 6. **Native, not imitated.** Real SwiftUI, Liquid Glass, Swift Charts and SF Symbols. No web view pretending to be a Mac app.
 7. **Built to grow.** New metrics, detectors and screens slot in without rewriting the core.
+8. **Plan, then compare.** Planned blocks and tasks sit beside what really happened, so the gap is visible and useful, never a guilt trip.
 
 ---
 
@@ -33,7 +34,7 @@ Research behind every decision here: [research/stack-and-architecture-report.md]
 | Project | **Xcode 27.2 JSON project** (`project.xcproj`) edited only via `xcrun xcodeproj` | Built for coding agents; everything can be built, run and tested from the terminal |
 | Tests | Swift Testing; swift-snapshot-testing for views | Date maths, attribution and the importer are the risky parts |
 | Importer | Swift command-line target that reuses the app's model code | Same validation as the app; no second language |
-| Signing | Ad-hoc ("Sign to Run Locally"); **no paid Apple account needed** until an iPhone app or iCloud sync | See §13 |
+| Signing | Ad-hoc ("Sign to Run Locally"); **no paid Apple account needed** until an iPhone app or iCloud sync | See §14 |
 
 **Rejected:** Tauri (your earlier attempt), Electron, Flutter, React Native and Compose. None gets real Liquid Glass, and widgets and Shortcuts would need Swift anyway.
 
@@ -60,7 +61,7 @@ Your current Notes format and where each line goes:
 
 | Table | Purpose | Key rules |
 |---|---|---|
-| `time_block` | Work, sleep, nature's call, and future custom kinds | Start/end stored as instants (UTC) plus time zone; `end = NULL` means a timer is running; `logical_day` fixed when written |
+| `time_block` | Work, sleep, nature's call, and future custom kinds | Start/end stored as instants (UTC) plus time zone; `end = NULL` means a timer is running; `logical_day` fixed when written; optional `task_id` / `plan_block_id` link it to what was planned |
 | `category` | Work projects/tags (e.g. "project horizon", "study", "pocf") | Colour + SF Symbol per category |
 | `food` | Your food library: name, aliases, serving, kcal / protein / caffeine per serving | Editing the library never changes past days |
 | `food_log_entry` | What you ate | Copies the nutrition values at log time; quantity/multiplier; time eaten |
@@ -70,9 +71,11 @@ Your current Notes format and where each line goes:
 | `import_batch`, `change_log` | Import provenance and audit history | Every import undoable; edits recorded |
 | `insight_memory` | What was shown, dismissed or snoozed | Prevents repeat nagging |
 
+Planning tables (`task_list`, `task`, `plan_block`, `plan_template`, `external_event`) are described in §9.
+
 All rows use UUID keys and keep `source` (manual / timer / import), `raw_text` and `deleted_at` (soft delete).
 
-### The day boundary (needs your decision, §15)
+### The day boundary (needs your decision, §16)
 
 Your notes are grouped by calendar date, but your days don't follow the calendar. On 10 Oct you worked 01:00–03:30 and then slept 05:15–10:55; that 01:00 block is really the tail of 9 Oct. Two options:
 
@@ -85,7 +88,7 @@ Whichever you pick is stored on each row when it's written, so changing the sett
 
 ## 4. Importing your history
 
-**Source:** `daily-data-2026-08-24-to-2026-10-11.md` (7 weeks, 24 Aug–11 Oct). It contains your raw Notes text in fenced blocks, followed by calculated tables. **The remaining ~4 weeks (12 Oct–today) need locating**, probably still in Apple Notes (§15).
+**Source:** `daily-data-2026-08-24-to-2026-10-11.md` (7 weeks, 24 Aug–11 Oct). It contains your raw Notes text in fenced blocks, followed by calculated tables. **The remaining ~4 weeks (12 Oct–today) need locating**, probably still in Apple Notes (§16).
 
 **Pipeline**
 1. **Parse** each day's raw block line by line: date header, work lines (`HHMM - HHMM [dur] > label`), `$` totals, food lines, `burn`, `sleep ->`, `nc ->`, `~` estimates. Line numbers and original text are kept.
@@ -105,23 +108,24 @@ Sidebar app (`NavigationSplitView`) with system Liquid Glass chrome. Keyboard-fi
 
 | Screen | What's on it |
 |---|---|
-| **Today** | 5 pinned hero metrics (work today, net kcal, protein, caffeine in system now, last night's sleep), each with a one-line headline ("6 h 10 m, 40 m above your 4-week average") and a sparkline. Then the **24-hour track** for today, running timers, and up to 3 insight cards |
-| **Timeline** | Day / week / month. The day view has lanes for sleep, work and NC, food as markers, a caffeine curve overlay and a live "now" line. The week view uses sleep/wake range bars and stacked work bars |
+| **Today** | 5 pinned hero metrics (work today, net kcal, protein, caffeine in system now, last night's sleep), each with a one-line headline ("6 h 10 m, 40 m above your 4-week average") and a sparkline. Then **Up next** (the next planned block and today's top tasks), the **24-hour track** for today (plan ghosted behind actual), running timers, and up to 3 insight cards |
+| **Calendar** | Day / week / month grid with two layers: **Plan** (time blocks you scheduled, outlined) and **Actual** (logged sleep, work and NC blocks, food markers, caffeine curve, live "now" line). Drag tasks in to time-block them; templates; optional Apple Calendar overlay. Week view adds sleep/wake range bars and stacked work bars (see §9) |
+| **Tasks** | Inbox, Today, Upcoming, Someday, Done, and your lists; estimates vs actual time; drag a task onto the Calendar to block time for it (see §9) |
 | **Work** | Total per day, per project/category, deep-work blocks (≥ 50 min), first-start time, longest focus streak, hours by time of day |
 | **Food** | Day log with running totals; library; favourites and recent items; meals/templates; "copy yesterday"; protein and caffeine trends |
 | **Sleep** | Duration, bedtime/wake ranges, midpoint, regularity, last 7/28 nights |
 | **Body** | Burn, steps, NC frequency and duration (descriptive only) |
 | **Trends** | Any metric over 7d / 28d / 3m / 1y / all, compare two metrics, simple correlations with confidence shown |
 | **Review** | Weekly and monthly report pages: what changed, best days, consistency |
-| **Library** | Foods, categories, custom metrics, goals |
+| **Library** | Foods, categories, task lists, day/week templates, custom metrics, goals |
 | **Import / Export** | Notes paste, file import with preview/undo, backups, JSON/CSV export |
 | **Settings** | Day boundary, targets, notification controls, quiet hours, caffeine half-life, appearance, hotkeys |
 
 ### Always-available surfaces
 - **Menu bar timer:** shows the running block live ("● study 1:12:40"). One click to stop, switch or start a block, plus quick add.
-- **Quick Entry** (global hotkey, e.g. ⌥Space): one field that understands your shorthand (`0945-1045 study`, `pulao 250g`, `coffee`, `nc 1550-1708`, `sleep 0045-0930`, `burn 373 11773`) and shows a live parsed preview before saving.
+- **Quick Entry** (global hotkey, e.g. ⌥Space): one field that understands your shorthand (`0945-1045 study`, `pulao 250g`, `coffee`, `nc 1550-1708`, `sleep 0045-0930`, `burn 373 11773`, `t write deck ~45m fri`, `plan 1400-1600 deep work`) and shows a live parsed preview before saving.
 - **Command palette (⌘K)** for every action and screen.
-- **Close the day** sheet in the evening: lists unlogged gaps in the 24-hour track, missing burn/steps, and foods without values, then shows the day's summary.
+- **Close the day** sheet in the evening: lists unlogged gaps in the 24-hour track, missing burn/steps, and foods without values; offers to mark planned blocks done/skipped and to move unfinished tasks; then shows the day's summary and lets you **plan tomorrow** (stamp a template, drag in tasks).
 
 ---
 
@@ -134,6 +138,7 @@ Sidebar app (`NavigationSplitView`) with system Liquid Glass chrome. Keyboard-fi
 | Energy | Logged burn; steps; net kcal (intake − logged burn); 7-day averages |
 | Sleep | Duration; onset; wake; midpoint; regularity (bedtime consistency, Sleep Regularity Index once there's enough data); naps |
 | Nature's call | Count; total minutes; average duration; time-of-day pattern (descriptive only, neutral wording) |
+| Planning | Planned vs actual work hours; plan adherence (% of planned minutes that happened); start-time drift; tasks completed, carried over, dropped; estimate accuracy (actual ÷ estimate) per list; overcommit (task estimates vs free planned time) |
 | Logging | Days logged, completeness per field, current logging streak |
 
 Every metric has a definition, a unit, an aggregation, and a "how is this calculated" popover.
@@ -144,7 +149,9 @@ Every metric has a definition, a unit, an aggregation, and a "how is this calcul
 
 | Chart | Used for |
 |---|---|
-| 24-hour lane track (rectangle marks) | Day view of sleep / work / NC with food markers |
+| 24-hour lane track (rectangle marks) | Day view of sleep / work / NC with food markers; planned blocks drawn as ghosted outlines behind |
+| Calendar grid (plan vs actual columns) | Day/week time blocking with plan and reality side by side |
+| Planned vs actual bars | Work hours per day/week, with adherence % |
 | Range bars (start→end per day) | Sleep window and work window across weeks: regularity at a glance |
 | Stacked bars | Work per category per day/week |
 | Bars + baseline band + rolling-average line | Any daily metric vs your 28-day typical range |
@@ -167,9 +174,50 @@ Rules (from Apple's HIG): a plain-language headline above every chart, detail on
 
 ---
 
-## 9. Proactive layer
+## 9. Plan: to-dos and time blocking
 
-### 9a. Insight engine (deterministic Swift; no AI needed)
+Logging records what happened; planning decides what should happen. Both live on the same timeline, so every day can be read as **plan vs actual**.
+
+### 9a. To-do lists
+- **Lists** (e.g. "project horizon", "exams", "personal"), each optionally tied to a work category so time spent on its tasks counts toward that category.
+- **Smart views:** Inbox, Today, Upcoming, Anytime, Someday, Done (a log of completed tasks).
+- **Task fields:** title, notes, list, tags, priority (none / ! / !!), due date (deadline), scheduled day (when you intend to do it), estimate (minutes), checklist / subtasks, recurrence (daily, weekly, custom, or "after completion"), status (open / done / dropped).
+- **Capture in your shorthand:** `t write SIH deck ~45m !! fri #horizon` → task, 45-min estimate, high priority, due Friday, in "horizon". Keyboard-first: ⌘N new, Space to complete, ⌘→ move to tomorrow, drag to reorder.
+- **Doing a task:** "Start" on a task starts a work timer linked to it; stopping logs the time block with the task attached. Every task shows actual time vs its estimate.
+- **No silent pile-up:** at Close the day, unfinished Today tasks are offered → tomorrow / pick a day / someday / drop.
+
+### 9b. Calendar & time blocking
+- **One Calendar screen** (it replaces a separate Timeline): Day, Week and Month, vertical hour grid starting at your day-start hour.
+- **Two layers:** **Plan** (outlined, translucent blocks you scheduled) and **Actual** (solid blocks you logged: work, sleep, NC, plus food markers). Show plan only, actual only, or both side by side in each day column.
+- **Time blocking:** drag a task from the sidebar onto the grid to create a block sized to its estimate; drag edges to resize (5-min snap, ⌥ for 1-min); ⌥-drag to duplicate; or type `1400-1600 deep work` straight into the grid or Quick Entry.
+- **Plan block fields:** start, end, kind (work, sleep target, break, gym, custom), category, linked task(s), note, recurrence, template, status (planned / started / done / skipped / moved).
+- **Plan → actual in one click:** when a planned block starts, a quiet notification says "Deep work · horizon starts now" with **Start** (starts the linked timer) and **Skip**. Afterwards, "Done as planned" creates the matching actual block (`source = plan`), so retroactive logging stays fast.
+- **Templates:** save an "ideal day" or "ideal week" (e.g. sleep 01:00–09:00, deep work 10:00–13:00, gym 18:00) and stamp it onto any day or week; recurring blocks for routines.
+- **Sleep target:** a recurring planned sleep window, compared with actual sleep and fed into sleep regularity.
+- **Apple Calendar (optional, opt-in):** read events from chosen calendars through EventKit as a read-only layer (classes, exams, calls) so blocks don't collide. Write-back can come later. Calendar permission behaviour on an ad-hoc build is checked in the M0 spike.
+
+### 9c. Planning metrics & insights
+- Planned vs actual work hours (day and week), plan adherence, start-time drift, completion and carry-over counts, estimate accuracy per list, overcommit.
+- Example insights: "You usually start planned deep work 35 min late", "Tasks in #horizon take 1.6× your estimate", "Tomorrow has 9 h of tasks but 5 h of free blocks".
+- Same rules as every other insight: personal baselines, minimum-data gates, no guilt colouring.
+
+### 9d. Data model additions
+
+| Table | Key fields | Rules |
+|---|---|---|
+| `task_list` | name, colour, SF Symbol, `category_id?`, sort, `archived_at` | Lists can map to work categories |
+| `task` | `list_id`, title, notes, priority, `due_date`, `scheduled_day`, `estimate_min`, `recurrence_rule`, `parent_task_id` (subtasks), status, `completed_at`, sort, provenance | A recurring task spawns its next instance on completion |
+| `plan_block` | `start_utc`, `end_utc`, tz, `logical_day`, kind, `category_id`, `task_id?`, note, status, `template_id?`, `recurrence_rule`, provenance | Never merged with `time_block`: plan and reality stay separate rows |
+| `plan_template` | name, scope (day / week), block definitions | Stamping a template creates ordinary `plan_block` rows |
+| `external_event` | EventKit identifier, calendar, title, start, end, `last_synced` | Read-only cache; can be rebuilt any time |
+
+Recurrence uses a subset of the iCalendar RRULE format, so it is standard and easy to test.
+
+---
+
+## 10. Proactive layer
+
+### 10a. Insight engine (deterministic Swift; no AI needed)
 Each insight is a pluggable **detector** with a minimum-data gate, an effect size, a confidence level and a "why am I seeing this" explanation.
 
 | Detector | Example | Needs |
@@ -181,28 +229,34 @@ Each insight is a pluggable **detector** with a minimum-data gate, an effect siz
 | Sleep vs work | "After < 6 h sleep, you average 1 h 40 m less work" | 8–10 days per group |
 | Protein streak | "Protein ≥ target 5 days running" | goal set |
 | Personal best | "Longest deep-work day in 6 weeks" | 28 days |
+| Plan adherence | "You usually start planned deep work 35 min late" | 10 planned blocks |
+| Estimate accuracy | "Tasks in #horizon take 1.6× your estimate" | 8 completed tasks with estimates |
+| Overcommit | "Tomorrow has 9 h of tasks but 5 h of free blocks" | tasks with estimates |
 | Data quality | "Burn missing 3 of last 7 days" | — |
 
 Statistical safeguards: "not logged" ≠ zero; estimates down-weighted; false-discovery control on correlations; wording is always "on days when…", never "causes"; no medical claims.
 
-### 9b. Notifications (local, all controllable)
+### 10b. Notifications (local, all controllable)
 | Notification | When | Level |
 |---|---|---|
 | Forgotten timer | Block running far past normal | Time Sensitive (only one allowed) |
 | Close the day | Your median sleep onset − 60 min | Active |
 | Caffeine cutoff | 30 min before your personal cutoff, only if you're still drinking | Active |
 | Missed log | A usual anchor (e.g. first work block) hasn't happened well past its usual time | Passive, max once/day |
+| Planned block starting | At a planned block's start, only if no timer is running; Start / Skip actions | Active, opt-in per block or template |
+| Task due | Morning of the due day, for tasks not yet scheduled into a block | Passive |
+| Morning plan | Optional, before your usual first start: today's blocks and due tasks | Passive |
 | Weekly review | Sunday (configurable) | Passive |
 | Insight of the day | When a strong insight appears | Passive |
 
-Caps: max 2 unrequested notifications per day; never during a running sleep block; quiet hours; three ignored in a row → frequency halves and an inline "turn off" appears.
+Planned-block and task-due reminders are ones you asked for, so they don't count toward the cap. Caps: max 2 unrequested notifications per day; never during a running sleep block; quiet hours; three ignored in a row → frequency halves and an inline "turn off" appears.
 
-### 9c. On-device AI (later, optional)
+### 10c. On-device AI (later, optional)
 Apple Foundation Models writes the daily recap and weekly review prose **from facts Swift has already computed**. It cannot introduce numbers (validated); if it's unavailable or fails, built-in templates are used. Nothing leaves the Mac.
 
 ---
 
-## 10. Design language — "premium, like Apple"
+## 11. Design language — "premium, like Apple"
 
 - **System first:** native sidebar, toolbar, inspector and sheets give Liquid Glass automatically. Custom glass only for the floating Quick Entry pill and menu bar panel.
 - **Type:** SF Pro; SF Pro Rounded for hero numbers; tabular figures for every timer and number column.
@@ -214,11 +268,12 @@ Apple Foundation Models writes the daily recap and weekly review prose **from fa
 
 ---
 
-## 11. Personalisation & extensibility
+## 12. Personalisation & extensibility
 
 - **Custom metrics** without code: add "weight (kg, last)", "water (ml, sum)" or "mood (1–5, avg)"; they automatically get logging, charts, baselines and insights.
 - **Custom block kinds** beyond work/sleep/NC (gym, commute, reading…).
 - **Pinned metrics** on Today, reorderable.
+- **Day and week templates** for time blocking; task lists, tags and recurrence of your own.
 - **Goals** per metric (optional, unset by default).
 - **Shorthand aliases** ("cof" → coffee 50 ml + 2 tsp).
 - **Detectors and notifications** are plug-ins: adding one = one file + its tests.
@@ -226,7 +281,7 @@ Apple Foundation Models writes the daily recap and weekly review prose **from fa
 
 ---
 
-## 12. Code architecture
+## 13. Code architecture
 
 ```
 logbook/
@@ -247,55 +302,59 @@ Rules: no view does maths; all time comes from an injected clock/calendar; no co
 
 ---
 
-## 13. Data safety, signing, platform limits
+## 14. Data safety, signing, platform limits
 
 - **Storage:** `~/Library/Application Support/logbook/logbook.sqlite`.
 - **Backups:** automatic daily snapshot (keep 30), optional mirror of snapshots to iCloud Drive (never the live database), manual JSON/CSV export, and a JSON re-import that proves the round trip.
-- **Signing:** ad-hoc is enough for the whole Mac app: charts, menu bar, notifications, on-device AI, launch at login.
+- **Signing:** ad-hoc is enough for the whole Mac app: charts, menu bar, notifications, on-device AI, launch at login. Reading Apple Calendar through EventKit needs only a permission prompt, not a paid account (to confirm in M0).
 - **Needs the $99/yr Apple Developer account** (not now): iCloud/CloudKit sync, an iPhone/Watch app beyond 7-day installs, and reliable desktop widgets.
 - **HealthKit doesn't exist on the Mac.** Steps and burn stay manual for now. Later: import the iPhone Health export, or an iPhone Shortcut that drops daily JSON into iCloud Drive (free), or an iPhone companion (paid).
 
 ---
 
-## 14. Roadmap
+## 15. Roadmap
 
 Each milestone ends with a working app you can use daily.
 
 | # | Milestone | Done when |
 |---|---|---|
-| M0 | **Spike** (½ day) | Ad-hoc build launches; menu bar timer label updates live; notification permission and login item survive a rebuild |
+| M0 | **Spike** (½ day) | Ad-hoc build launches; menu bar timer label updates live; notification permission, login item and Calendar (EventKit) permission survive a rebuild |
 | M1 | **Foundation** | Project + packages + schema + day attribution + `daily_facts`; date-maths test matrix passes (midnight crossings, DST, missing days) |
 | M2 | **Import history** | All 7 weeks (plus the missing 4 once found) imported with preview and undo; totals match your notes or the differences are explained; food library seeded |
 | M3 | **Daily driver** | Today screen, Quick Entry with shorthand, live timers, menu bar, Close the day; **you stop using Notes** |
 | M4 | **Food** | Library, favourites, meals, copy-yesterday, caffeine curve, protein tracking |
-| M5 | **Charts & trends** | Timeline day/week/month, Work/Sleep/Body screens, Trends, baselines |
-| M6 | **Proactive** | Insight engine + detectors, notifications with caps, weekly review |
-| M7 | **Polish** | Full design pass, motion, icon, keyboard coverage, accessibility, settings, backups/export |
-| M8 | **AI recap** | On-device daily recap and weekly review prose with template fallback |
-| M9 | **Everywhere on the Mac** | Shortcuts/Spotlight actions, launch at login, custom metrics UI |
+| M5 | **Charts & trends** | Calendar actual layer (day/week/month), Work/Sleep/Body screens, Trends, baselines |
+| M6 | **Plan** | Tasks (lists, smart views, estimates, recurrence), Calendar plan layer with drag-to-block, templates, plan → actual in one click, plan tomorrow at Close the day, optional Apple Calendar overlay |
+| M7 | **Proactive** | Insight engine + detectors (incl. planning), notifications with caps, weekly review |
+| M8 | **Polish** | Full design pass, motion, icon, keyboard coverage, accessibility, settings, backups/export |
+| M9 | **AI recap** | On-device daily recap and weekly review prose with template fallback |
+| M10 | **Everywhere on the Mac** | Shortcuts/Spotlight actions (log, add task, start block), launch at login, custom metrics UI |
 | Later | Widgets · iPhone/Watch quick log · Health import · iCloud sync · journal · gym log | Decide when ready; most need the paid account |
 
 ---
 
-## 15. Decisions needed from you
+## 16. Decisions needed from you
 
 1. **Day boundary:** A (calendar day, like your notes) or B (personal day start, e.g. 05:00)?
 2. **Missing weeks:** where are 12 Oct → today? Still in Apple Notes? (Paste them in, or I read them once with your OK.)
 3. **What counts as "work":** today every `>` block counts (study, exams, calls, misc). Keep that, or tag some as non-work?
 4. **Targets:** set any now (protein g, caffeine cap mg, work hours, sleep hours, bedtime), or leave them unset and let baselines do the work?
 5. **NC sub-durations** `[13m / 17m / 48m]`: what do the three parts mean, so they can be labelled properly?
-6. **Project folder:** where the app's code should live (e.g. `~/Developer/logbook`).
-7. **Paid Apple account:** confirm "not now" (everything up to M9 works without it).
+6. ~~**Project folder**~~ — decided: `~/Downloads/GitHub/logbook`, repo `kanishkpaul/logbook` (private).
+7. **Paid Apple account:** confirm "not now" (everything up to M10 works without it).
+8. **Existing to-dos and calendar:** where do your tasks and plans live today (Apple Reminders, Apple Calendar, Things, Notion, paper)? Import once, keep reading them, or start fresh?
+9. **Apple Calendar overlay:** show your Apple Calendar events read-only on the Calendar, yes or no?
 
 ---
 
-## 16. Risks (top 6)
+## 17. Risks (top 7)
 
 | Risk | Mitigation |
 |---|---|
 | Wrong day attribution corrupts every metric | Fixed on write, per-kind rules, heavy tests, decision #1 above |
 | Importer misreads messy lines | Preview, warnings, keep raw text, batch undo, golden tests from real lines |
 | Menu bar label stops refreshing | Spike in M0; `NSStatusItem` fallback |
+| Planning features make logging slower or the app cluttered | Logging paths stay untouched; Tasks and Calendar are their own screens; plan layer can be hidden; adherence never shown in red |
 | Insights feel obvious or wrong | Data gates, confidence shown, few cards, dismiss memory |
 | AI invents numbers | It never sees raw data or writes digits; validation + templates |
 | New JSON Xcode project format has gaps | Only Apple's CLI edits it; fall back to classic project/XcodeGen if needed |

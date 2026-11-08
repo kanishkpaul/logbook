@@ -9,7 +9,7 @@
 
 **Work, food, sleep and energy — logged in seconds, understood over months.**
 
-<sub>A native macOS app that replaces a daily Apple Notes log with live timers, real metrics, beautiful charts and gentle, proactive nudges.</sub>
+<sub>A native macOS app that replaces a daily Apple Notes log with live timers, to-dos, a time-blocking calendar, real metrics, beautiful charts and gentle, proactive nudges.</sub>
 
 <br/>
 
@@ -42,6 +42,8 @@ Every day gets logged by hand: work blocks, what was eaten (with calories, prote
 | 🟠 | **Food** | `pulao 250g - 408 / 8 / 0` | calories, protein, caffeine, caffeine still in your system |
 | 🟢 | **Energy** | `burn 373 11773` | calories burnt, steps, net calories |
 | 🩵 | **Nature's call** | `nc 1550-1708` | count, minutes, time-of-day pattern |
+| ✅ | **To-dos** | `t write deck ~45m !! fri` | due and scheduled tasks, actual time vs estimate |
+| 🗓 | **Time blocks** | `plan 1400-1600 deep work` | plan vs actual, adherence, start-time drift |
 
 Anything else (weight, water, gym, mood, …) can be added later as a **custom metric** and automatically gets logging, charts, baselines and insights.
 
@@ -90,6 +92,20 @@ Local SQLite, daily automatic backups, full JSON/CSV export, and every imported 
 
 </td>
 </tr>
+<tr>
+<td valign="top">
+
+### ✅ To-dos that know about time
+Lists, Inbox, Today and Upcoming, with estimates, due dates and recurrence. Hit **Start** on a task and its timer runs; every task shows actual time against its estimate.
+
+</td>
+<td valign="top">
+
+### 🗓 Time blocking, plan vs actual
+Drag tasks onto a day or week **calendar** to block time, stamp an "ideal day" template, then see what you planned ghosted behind what actually happened. Apple Calendar events can sit alongside, read-only.
+
+</td>
+</tr>
 </table>
 
 ## Screens
@@ -97,19 +113,19 @@ Local SQLite, daily automatic backups, full JSON/CSV export, and every imported 
 ```
 ┌────────────────┬─────────────────────────────────────────────────────────────────┐
 │  Today         │  WORK 6h 30m   NET 1,243 kcal   PROTEIN 102 g   CAFFEINE 38 mg  │
-│  Timeline      │  ─────────────────────────────────────────────────────────────  │
-│  Work          │  sleep  ▓▓▓▓▓▓▓▓▓▓▓                                             │
-│  Food          │  work               ▓▓   ▓▓▓        ▓▓▓▓▓▓  ▓                   │
-│  Sleep         │  nc                            ▓▓                               │
-│  Body          │  food               •    •     •         •    •   │ now         │
-│  Trends        │  ─────────────────────────────────────────────────────────────  │
-│  Review        │  ◆ Last caffeine is within 6 h of your usual sleep time         │
-│  Library       │  ◆ Longest deep-work day in 6 weeks                             │
-│  Settings      │                                                                 │
+│  Calendar      │  ─────────────────────────────────────────────────────────────  │
+│  Tasks         │  sleep  ▓▓▓▓▓▓▓▓▓▓▓                                             │
+│  Work          │  work               ▓▓   ▓▓▓        ▓▓▓▓▓▓  ▓                   │
+│  Food          │  nc                            ▓▓                               │
+│  Sleep         │  food               •    •     •         •    •   │ now         │
+│  Body          │  ─────────────────────────────────────────────────────────────  │
+│  Trends        │  ◆ Last caffeine is within 6 h of your usual sleep time         │
+│  Review        │  ◆ Longest deep-work day in 6 weeks                             │
+│  Library       │                                                                 │
 └────────────────┴─────────────────────────────────────────────────────────────────┘
 ```
 
-**Today** · **Timeline** (day / week / month) · **Work** · **Food** · **Sleep** · **Body** · **Trends** · **Review** (weekly and monthly reports) · **Library** (foods, categories, custom metrics, goals) · **Import / Export** · **Settings**, plus the **menu bar timer**, **Quick Entry** and the **command palette**.
+**Today** · **Calendar** (day / week / month, plan vs actual) · **Tasks** · **Work** · **Food** · **Sleep** · **Body** · **Trends** · **Review** (weekly and monthly reports) · **Library** (foods, categories, custom metrics, goals) · **Import / Export** · **Settings**, plus the **menu bar timer**, **Quick Entry** and the **command palette**.
 
 ## Stack
 
@@ -134,6 +150,7 @@ flowchart LR
         QE[Quick Entry<br/>shorthand parser]
         MB[Menu bar<br/>timers]
         IMP[Notes import<br/>preview · undo]
+        PLAN[Tasks &<br/>time blocks]
     end
     subgraph Core["LogbookCore (pure Swift)"]
         ATTR[Day attribution<br/>& interval maths]
@@ -143,7 +160,7 @@ flowchart LR
     DB[(SQLite<br/>GRDB · SQLiteData)]
     subgraph UI["LogbookUI (SwiftUI)"]
         TODAY[Today]
-        CHARTS[Timeline & Trends]
+        CHARTS[Calendar & Trends]
         REVIEW[Review]
     end
     NOTIF[Notifications]
@@ -152,6 +169,7 @@ flowchart LR
     QE --> ATTR
     MB --> ATTR
     IMP --> ATTR
+    PLAN --> ATTR
     ATTR --> DB
     DB --> MET --> INS
     MET --> UI
@@ -183,11 +201,12 @@ logbook/
 | ⬜️ | **M2 · Import history** | ~11 weeks of Notes logs imported with preview and undo; food library seeded |
 | ⬜️ | **M3 · Daily driver** | Today, Quick Entry, timers, menu bar, Close the day; **Notes retired** |
 | ⬜️ | **M4 · Food** | Library, favourites, meals, caffeine curve, protein tracking |
-| ⬜️ | **M5 · Charts & trends** | Timeline, Work, Sleep, Body and Trends screens with baselines |
-| ⬜️ | **M6 · Proactive** | Insight engine, capped notifications, weekly review |
-| ⬜️ | **M7 · Polish** | Design pass, motion, icon, keyboard, accessibility, backups |
-| ⬜️ | **M8 · AI recap** | On-device daily and weekly prose with template fallback |
-| ⬜️ | **M9 · Everywhere on the Mac** | Shortcuts and Spotlight actions, launch at login, custom metrics UI |
+| ⬜️ | **M5 · Charts & trends** | Calendar (actual layer), Work, Sleep, Body and Trends screens with baselines |
+| ⬜️ | **M6 · Plan** | To-do lists, time-blocking calendar, templates, plan vs actual, Apple Calendar overlay |
+| ⬜️ | **M7 · Proactive** | Insight engine, capped notifications, weekly review |
+| ⬜️ | **M8 · Polish** | Design pass, motion, icon, keyboard, accessibility, backups |
+| ⬜️ | **M9 · AI recap** | On-device daily and weekly prose with template fallback |
+| ⬜️ | **M10 · Everywhere on the Mac** | Shortcuts and Spotlight actions, launch at login, custom metrics UI |
 | 💭 | **Later** | Widgets · iPhone/Watch quick log · Health import · iCloud sync |
 
 ## Principles
@@ -199,6 +218,7 @@ logbook/
 5. **Your history is sacred.** Local, backed up, exportable, undoable.
 6. **Native, not imitated.** Real SwiftUI, real glass.
 7. **Built to grow.** New metrics and features without rewriting the core.
+8. **Plan, then compare.** What you planned beside what happened, never a guilt trip.
 
 ## Building
 
@@ -216,7 +236,7 @@ make install   # Release build to /Applications/logbook.app
 
 ## Docs
 
-- 📘 [Master plan](docs/MASTER_PLAN.md): data model, screens, metrics, proactive layer, roadmap, open decisions
+- 📘 [Master plan](docs/MASTER_PLAN.md): data model, screens, metrics, to-dos and time blocking, proactive layer, roadmap, open decisions
 - 🔬 [Stack & architecture research](docs/research/stack-and-architecture-report.md): why Swift, SwiftUI and SQLite, with sources
 - 🗂 [Research notes](docs/research/notes/): persistence, Apple platform features, cross-platform alternatives, UX patterns, insight engine, engineering patterns, build tooling
 

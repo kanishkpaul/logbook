@@ -1,11 +1,11 @@
 # logbook — notes for Claude
 
-Private, single-user native macOS logbook (work blocks, food with kcal/protein/caffeine, burn/steps, nature's-call blocks, sleep). Personal use only; never distributed.
+Private, single-user native macOS logbook (work blocks, food with kcal/protein/caffeine, burn/steps, nature's-call blocks, sleep) with to-do lists and a time-blocking calendar (plan vs actual). Personal use only; never distributed.
 
 **Read first:** `docs/MASTER_PLAN.md` (what we're building and in what order) and `docs/research/stack-and-architecture-report.md` (why).
 
 ## Status
-Planning. No code yet. Next milestone: **M0 spike** (see the master plan §14). Open decisions are in master plan §15. Don't build past them without asking.
+Planning. No code yet. Next milestone: **M0 spike** (see the master plan §15). Open decisions are in master plan §16. Don't build past them without asking.
 
 ## Stack (decided)
 - Swift 6.4, Swift 6 language mode. SwiftUI + Swift Charts. macOS 27 deployment target.
@@ -29,3 +29,8 @@ Planning. No code yet. Next milestone: **M0 spike** (see the master plan §14). 
 
 ## Privacy
 Real personal log data never gets committed. Test fixtures use anonymised or synthetic snippets. The live database lives in `~/Library/Application Support/logbook/`.
+
+## Planning rules
+- `plan_block` (what was planned) and `time_block` (what happened) are separate tables; never merge them. Links go through `time_block.plan_block_id` / `task_id`.
+- Recurrence is an iCalendar RRULE subset, tested like date maths.
+- Apple Calendar (EventKit) is read-only and cached in `external_event`; never write to the user's calendars without an explicit feature for it.
