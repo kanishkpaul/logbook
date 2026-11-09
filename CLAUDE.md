@@ -5,21 +5,23 @@ Private, single-user native macOS logbook (work blocks, food with kcal/protein/c
 **Read first:** `docs/MASTER_PLAN.md` (what we're building and in what order) and `docs/research/stack-and-architecture-report.md` (why).
 
 ## Status
-M0 spike built (manual checks pending: `docs/M0_SPIKE.md`). M1 foundation built: Core (logical days, day boundary, attribution, clipping) and Persistence (schema, write path, `daily_facts`). Next: finish M0 checks, then **M2 import**. Open decisions are in master plan §16. Don't build past them without asking. Decision #1 (day boundary) is still open: the code supports any start hour; nothing yet persists a default.
+M0 spike built; menu bar timer verified (via `NSStatusItem`, see `docs/M0_SPIKE.md`); permission-survival checks still need the user's clicks. M1 foundation built. M2 importer built (parser, preview, apply, undo, `logbook-import` CLI; format in `docs/IMPORT_FORMAT.md`); the user adds their real data later. Next: M3 daily driver. Decisions so far: day boundary = calendar day (`DayBoundary.standard`); NC stores only the total. Other open decisions are in master plan §16. Don't build past them without asking.
 
 ## Commands
-- `make test` — `swift test` for Core and Persistence (fast; use this most).
+- `make test` — `swift test` for Core, Persistence and Import (fast; use this most).
 - `make build` / `make run` — xcodebuild Debug into `build/DD`, then open.
 - `make format-check` — after every `xcrun xcodeproj` change.
 - `make schema` — regenerate `Packages/LogbookPersistence/schema.sql`.
 - `make install` — Release to `/Applications/Logbook.app` (one fixed path).
 - `make spike-status` — what the M0 spike recorded on last launch.
+- `make import-preview FILE=…` / `make import-apply FILE=…` / `make import-batches` — the importer against the live DB (`ARGS="--db path"` for another DB). Undo: `swift run --package-path Packages/LogbookImport logbook-import undo <batch-id>`.
 - xcodebuild needs `-skipMacroValidation` (package macros); the Makefile passes it.
 
 ## Module map (dependencies point down)
-- `App/` (synced folder, MainActor default): entry point, menu bar, system services (notifications, login item, EventKit). `App/Spike/` is the M0 spike and gets replaced in M3.
+- `App/` (synced folder, MainActor default): entry point, `MenuBar/StatusItemController` (NSStatusItem; **don't use `MenuBarExtra` with a timer label**: it layout-loops on macOS 27), system services (notifications, login item, EventKit). `App/Spike/` is the M0 spike and gets replaced in M3.
+- `Packages/LogbookImport`: `ShorthandParser` (pure) → `ImportPlanner` (preview against the DB) → `Importer.apply/undo`, plus the `logbook-import` executable. Depends on Core and Persistence. Fixtures are synthetic only.
 - `Packages/LogbookUI`: design system (`Domain` colours/symbols) and views. MainActor default. Depends on Core.
-- `Packages/LogbookPersistence`: `Schema` (append-only migrations, triggers, views), `@Table` records, `LogStore` (the only write path; applies attribution on write), `AppDatabase`. Depends on Core, GRDB, SQLiteData.
+- `Packages/LogbookPersistence`: `Schema` (append-only migrations, triggers, views), `@Table` records, `LogStore` (the only write path; applies attribution on write; its pure `…Row` builders let callers batch rows in one transaction), `AppDatabase`. Depends on Core, GRDB, SQLiteData. Record memberwise inits are internal: build rows through `LogStore`.
 - `Packages/LogbookCore`: pure value types and maths, no dependencies.
 - SQL is snake_case; Swift is camelCase via `@Column("...")`. Dates are UTC text `yyyy-MM-dd HH:mm:ss.SSS`, UUIDs lowercase text.
 - Tables added later must be added to `Schema.auditedTables` if they hold logged data; altering an audited table means calling `installChangeLogTriggers` again in that migration.

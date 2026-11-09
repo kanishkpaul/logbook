@@ -34,7 +34,7 @@ CREATE TABLE "food" (
   "created_at" TEXT NOT NULL,
   "updated_at" TEXT NOT NULL,
   "archived_at" TEXT
-) STRICT;
+, "import_batch_id" TEXT REFERENCES "import_batch"("id") ON DELETE SET NULL) STRICT;
 
 CREATE TABLE "food_log_entry" (
   "id" TEXT PRIMARY KEY NOT NULL,
@@ -257,19 +257,19 @@ END;
 CREATE TRIGGER "food_change_log_delete" AFTER DELETE ON "food"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', OLD."id", 'delete', json_object('id', OLD."id", 'name', OLD."name", 'aliases', OLD."aliases", 'serving_size', OLD."serving_size", 'serving_unit', OLD."serving_unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'is_favourite', OLD."is_favourite", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'archived_at', OLD."archived_at"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', OLD."id", 'delete', json_object('id', OLD."id", 'name', OLD."name", 'aliases', OLD."aliases", 'serving_size', OLD."serving_size", 'serving_unit', OLD."serving_unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'is_favourite', OLD."is_favourite", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'archived_at', OLD."archived_at", 'import_batch_id', OLD."import_batch_id"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
 END;
 
 CREATE TRIGGER "food_change_log_insert" AFTER INSERT ON "food"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'name', NEW."name", 'aliases', NEW."aliases", 'serving_size', NEW."serving_size", 'serving_unit', NEW."serving_unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'is_favourite', NEW."is_favourite", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'archived_at', NEW."archived_at"), NEW."updated_at");
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'name', NEW."name", 'aliases', NEW."aliases", 'serving_size', NEW."serving_size", 'serving_unit', NEW."serving_unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'is_favourite', NEW."is_favourite", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'archived_at', NEW."archived_at", 'import_batch_id', NEW."import_batch_id"), NEW."updated_at");
 END;
 
 CREATE TRIGGER "food_change_log_update" AFTER UPDATE ON "food"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', NEW."id", 'update', json_object('id', OLD."id", 'name', OLD."name", 'aliases', OLD."aliases", 'serving_size', OLD."serving_size", 'serving_unit', OLD."serving_unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'is_favourite', OLD."is_favourite", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'archived_at', OLD."archived_at"), json_object('id', NEW."id", 'name', NEW."name", 'aliases', NEW."aliases", 'serving_size', NEW."serving_size", 'serving_unit', NEW."serving_unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'is_favourite', NEW."is_favourite", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'archived_at', NEW."archived_at"), NEW."updated_at");
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', NEW."id", 'update', json_object('id', OLD."id", 'name', OLD."name", 'aliases', OLD."aliases", 'serving_size', OLD."serving_size", 'serving_unit', OLD."serving_unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'is_favourite', OLD."is_favourite", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'archived_at', OLD."archived_at", 'import_batch_id', OLD."import_batch_id"), json_object('id', NEW."id", 'name', NEW."name", 'aliases', NEW."aliases", 'serving_size', NEW."serving_size", 'serving_unit', NEW."serving_unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'is_favourite', NEW."is_favourite", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'archived_at', NEW."archived_at", 'import_batch_id', NEW."import_batch_id"), NEW."updated_at");
 END;
 
 CREATE TRIGGER "food_log_entry_change_log_delete" AFTER DELETE ON "food_log_entry"

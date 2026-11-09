@@ -8,6 +8,10 @@ import SQLiteData
 /// Every write applies day attribution with the *current* `boundary` and
 /// stores the result, so changing the boundary later never rewrites history.
 /// Time, time zone and ids are injected, so tests are deterministic.
+///
+/// The `…Row` builders are pure: they apply the same rules without touching
+/// the database, so a caller (the importer) can insert many rows in one
+/// transaction.
 public struct LogStore: Sendable {
     public let database: any DatabaseWriter
     public var boundary: DayBoundary
@@ -17,7 +21,7 @@ public struct LogStore: Sendable {
 
     public init(
         database: any DatabaseWriter,
-        boundary: DayBoundary,
+        boundary: DayBoundary = .standard,
         now: @escaping @Sendable () -> Date = { Date() },
         timeZone: @escaping @Sendable () -> TimeZone = { .current },
         uuid: @escaping @Sendable () -> UUID = { UUID() }
@@ -37,6 +41,103 @@ public struct LogStore: Sendable {
         case unknownMetric(String)
     }
 
+    // MARK: Row builders (pure)
+
+    /// A finished block with its logical day attributed.
+    public func blockRow(
+        kind: BlockKind,
+        start: Date,
+        end: Date,
+        label: String = "",
+        categoryID: Category.ID? = nil,
+        timeZone tzOverride: TimeZone? = nil,
+        isEstimate: Bool = false,
+        source: Source = .manual,
+        rawText: String? = nil,
+        importBatchID: ImportBatch.ID? = nil,
+        id: UUID? = nil
+    ) throws -> TimeBlock {
+        guard end >= start else { throw Failure.endBeforeStart }
+        let t = now(), tz = tzOverride ?? timeZone()
+        return TimeBlock(
+            id: id ?? uuid(), kind: kind, label: label, categoryID: categoryID,
+            startUTC: start, endUTC: end, tzIdentifier: tz.identifier,
+            logicalDay: Attribution.day(kind: kind, start: start, end: end, boundary: boundary, timeZone: tz),
+            isEstimate: isEstimate, source: source, importBatchID: importBatchID, rawText: rawText,
+            createdAt: t, updatedAt: t
+        )
+    }
+
+    /// A food entry with nutrition snapshotted:
+    /// explicit `nutrition` wins, else the library food × `servings`, else
+    /// no values (*needs values*).
+    public func foodEntryRow(
+        name: String,
+        food: Food? = nil,
+        servings: Double = 1,
+        quantity: Double? = nil,
+        unit: String? = nil,
+        nutrition: Nutrition? = nil,
+        consumedAt: Date? = nil,
+        timeZone tzOverride: TimeZone? = nil,
+        isEstimate: Bool = false,
+        source: Source = .manual,
+        rawText: String? = nil,
+        importBatchID: ImportBatch.ID? = nil,
+        id: UUID? = nil
+    ) -> FoodLogEntry {
+        let t = now(), tz = tzOverride ?? timeZone()
+        let at = consumedAt ?? t
+        let snapshot = nutrition ?? food?.nutrition.scaled(by: servings) ?? Nutrition()
+        return FoodLogEntry(
+            id: id ?? uuid(), foodID: food?.id, name: name, quantity: quantity, unit: unit,
+            kcal: snapshot.kcal, proteinG: snapshot.proteinG, caffeineMg: snapshot.caffeineMg,
+            consumedAt: at, tzIdentifier: tz.identifier,
+            logicalDay: boundary.logicalDay(containing: at, in: tz),
+            isEstimate: isEstimate, source: source, importBatchID: importBatchID, rawText: rawText,
+            createdAt: t, updatedAt: t
+        )
+    }
+
+    public func foodRow(
+        name: String,
+        nutrition: Nutrition,
+        servingSize: Double? = nil,
+        servingUnit: String? = nil,
+        importBatchID: ImportBatch.ID? = nil,
+        id: UUID? = nil
+    ) -> Food {
+        let t = now()
+        return Food(
+            id: id ?? uuid(), name: name, servingSize: servingSize, servingUnit: servingUnit,
+            kcal: nutrition.kcal, proteinG: nutrition.proteinG, caffeineMg: nutrition.caffeineMg,
+            createdAt: t, updatedAt: t, importBatchID: importBatchID
+        )
+    }
+
+    public func metricSampleRow(
+        metricID: MetricDefinition.ID,
+        value: Double,
+        day: LogicalDay? = nil,
+        isEstimate: Bool = false,
+        source: Source = .manual,
+        rawText: String? = nil,
+        importBatchID: ImportBatch.ID? = nil,
+        id: UUID? = nil
+    ) -> MetricSample {
+        let t = now()
+        return MetricSample(
+            id: id ?? uuid(), metricID: metricID,
+            logicalDay: day ?? boundary.logicalDay(containing: t, in: timeZone()),
+            value: value, recordedAt: t, isEstimate: isEstimate, source: source,
+            importBatchID: importBatchID, rawText: rawText, createdAt: t, updatedAt: t
+        )
+    }
+
+    public func importBatchRow(sourceName: String, lineCount: Int, note: String = "") -> ImportBatch {
+        ImportBatch(id: uuid(), sourceName: sourceName, note: note, lineCount: lineCount, importedAt: now())
+    }
+
     // MARK: Time blocks
 
     /// Starts a timer: a block with no end, saved immediately.
@@ -49,7 +150,7 @@ public struct LogStore: Sendable {
             logicalDay: Attribution.day(kind: kind, start: t, end: nil, boundary: boundary, timeZone: tz),
             source: .timer, createdAt: t, updatedAt: t
         )
-        try write { db in
+        try database.write { db in
             if try !TimeBlock.where({ $0.kind.eq(kind) && $0.endUTC.is(nil) && $0.deletedAt.is(nil) }).fetchAll(db).isEmpty {
                 throw Failure.alreadyRunning(kind)
             }
@@ -62,7 +163,7 @@ public struct LogStore: Sendable {
     @discardableResult
     public func stopBlock(id: TimeBlock.ID) throws -> TimeBlock {
         let t = now(), tz = timeZone()
-        return try write { db in
+        return try database.write { db in
             guard var block = try TimeBlock.find(id).fetchOne(db) else { throw Failure.notFound(id) }
             guard block.endUTC == nil else { throw Failure.notRunning(id) }
             block.endUTC = max(t, block.startUTC)
@@ -74,7 +175,7 @@ public struct LogStore: Sendable {
         }
     }
 
-    /// Running blocks, at most one per kind.
+    /// Running blocks, at most one per kind (also enforced by a trigger).
     public func runningBlocks() throws -> [TimeBlock] {
         try database.read { db in
             try TimeBlock.where { $0.endUTC.is(nil) && $0.deletedAt.is(nil) }.order(by: \.startUTC).fetchAll(db)
@@ -96,16 +197,12 @@ public struct LogStore: Sendable {
         importBatchID: ImportBatch.ID? = nil,
         id: UUID? = nil
     ) throws -> TimeBlock {
-        guard end >= start else { throw Failure.endBeforeStart }
-        let t = now(), tz = tzOverride ?? timeZone()
-        let block = TimeBlock(
-            id: id ?? uuid(), kind: kind, label: label, categoryID: categoryID,
-            startUTC: start, endUTC: end, tzIdentifier: tz.identifier,
-            logicalDay: Attribution.day(kind: kind, start: start, end: end, boundary: boundary, timeZone: tz),
-            isEstimate: isEstimate, source: source, importBatchID: importBatchID, rawText: rawText,
-            createdAt: t, updatedAt: t
+        let block = try blockRow(
+            kind: kind, start: start, end: end, label: label, categoryID: categoryID,
+            timeZone: tzOverride, isEstimate: isEstimate, source: source, rawText: rawText,
+            importBatchID: importBatchID, id: id
         )
-        try write { db in try TimeBlock.insert { block }.execute(db) }
+        try database.write { db in try TimeBlock.insert { block }.execute(db) }
         return block
     }
 
@@ -114,7 +211,7 @@ public struct LogStore: Sendable {
     public func retime(id: TimeBlock.ID, start: Date, end: Date?) throws -> TimeBlock {
         if let end, end < start { throw Failure.endBeforeStart }
         let t = now()
-        return try write { db in
+        return try database.write { db in
             guard var block = try TimeBlock.find(id).fetchOne(db) else { throw Failure.notFound(id) }
             let tz = TimeZone(identifier: block.tzIdentifier) ?? timeZone()
             block.startUTC = start
@@ -129,7 +226,7 @@ public struct LogStore: Sendable {
     /// Soft delete: the row stays (and stays in the change log) but drops out of every total.
     public func deleteBlock(id: TimeBlock.ID) throws {
         let t = now()
-        try write { db in
+        try database.write { db in
             guard var block = try TimeBlock.find(id).fetchOne(db) else { throw Failure.notFound(id) }
             block.deletedAt = t
             block.updatedAt = t
@@ -147,13 +244,8 @@ public struct LogStore: Sendable {
         servingUnit: String? = nil,
         id: UUID? = nil
     ) throws -> Food {
-        let t = now()
-        let food = Food(
-            id: id ?? uuid(), name: name, servingSize: servingSize, servingUnit: servingUnit,
-            kcal: nutrition.kcal, proteinG: nutrition.proteinG, caffeineMg: nutrition.caffeineMg,
-            createdAt: t, updatedAt: t
-        )
-        try write { db in try Food.insert { food }.execute(db) }
+        let food = foodRow(name: name, nutrition: nutrition, servingSize: servingSize, servingUnit: servingUnit, id: id)
+        try database.write { db in try Food.insert { food }.execute(db) }
         return food
     }
 
@@ -161,7 +253,7 @@ public struct LogStore: Sendable {
     @discardableResult
     public func updateFood(id: Food.ID, name: String? = nil, nutrition: Nutrition? = nil) throws -> Food {
         let t = now()
-        return try write { db in
+        return try database.write { db in
             guard var food = try Food.find(id).fetchOne(db) else { throw Failure.notFound(id) }
             if let name { food.name = name }
             if let nutrition {
@@ -175,11 +267,7 @@ public struct LogStore: Sendable {
         }
     }
 
-    /// Logs something eaten, copying nutrition onto the entry.
-    ///
-    /// - `nutrition` given explicitly (e.g. `pulao 250g - 408 / 8 / 0`) wins.
-    /// - Otherwise the library food's per-serving values × `servings`.
-    /// - Otherwise the entry has no values and is flagged *needs values*.
+    /// Logs something eaten, copying nutrition onto the entry (see `foodEntryRow`).
     @discardableResult
     public func logFood(
         name: String,
@@ -195,24 +283,23 @@ public struct LogStore: Sendable {
         importBatchID: ImportBatch.ID? = nil,
         id: UUID? = nil
     ) throws -> FoodLogEntry {
-        let t = now(), tz = timeZone()
-        let at = consumedAt ?? t
-        let snapshot = nutrition ?? food?.nutrition.scaled(by: servings) ?? Nutrition()
-        let entry = FoodLogEntry(
-            id: id ?? uuid(), foodID: food?.id, name: name, quantity: quantity, unit: unit,
-            kcal: snapshot.kcal, proteinG: snapshot.proteinG, caffeineMg: snapshot.caffeineMg,
-            consumedAt: at, tzIdentifier: tz.identifier,
-            logicalDay: boundary.logicalDay(containing: at, in: tz),
-            isEstimate: isEstimate, source: source, importBatchID: importBatchID, rawText: rawText,
-            createdAt: t, updatedAt: t
+        let entry = foodEntryRow(
+            name: name, food: food, servings: servings, quantity: quantity, unit: unit,
+            nutrition: nutrition, consumedAt: consumedAt, isEstimate: isEstimate, source: source,
+            rawText: rawText, importBatchID: importBatchID, id: id
         )
-        try write { db in try FoodLogEntry.insert { entry }.execute(db) }
+        try database.write { db in try FoodLogEntry.insert { entry }.execute(db) }
         return entry
     }
 
     // MARK: Metrics
 
-    /// Records a value for a metric (`steps`, `active_kcal`, or a custom key) on a logical day.
+    /// The active definition for a metric key (`steps`, `active_kcal`, or a custom key).
+    public static func metricDefinition(key: String, in db: Database) throws -> MetricDefinition? {
+        try MetricDefinition.where { $0.key.eq(key) && $0.archivedAt.is(nil) }.fetchOne(db)
+    }
+
+    /// Records a value for a metric on a logical day.
     @discardableResult
     public func recordMetric(
         key: String,
@@ -224,16 +311,11 @@ public struct LogStore: Sendable {
         importBatchID: ImportBatch.ID? = nil,
         id: UUID? = nil
     ) throws -> MetricSample {
-        let t = now(), tz = timeZone()
-        return try write { db in
-            guard let def = try MetricDefinition.where({ $0.key.eq(key) && $0.archivedAt.is(nil) }).fetchOne(db) else {
-                throw Failure.unknownMetric(key)
-            }
-            let sample = MetricSample(
-                id: id ?? uuid(), metricID: def.id,
-                logicalDay: day ?? boundary.logicalDay(containing: t, in: tz),
-                value: value, recordedAt: t, isEstimate: isEstimate, source: source,
-                importBatchID: importBatchID, rawText: rawText, createdAt: t, updatedAt: t
+        try database.write { db in
+            guard let def = try Self.metricDefinition(key: key, in: db) else { throw Failure.unknownMetric(key) }
+            let sample = metricSampleRow(
+                metricID: def.id, value: value, day: day, isEstimate: isEstimate, source: source,
+                rawText: rawText, importBatchID: importBatchID, id: id
             )
             try MetricSample.insert { sample }.execute(db)
             return sample
@@ -252,13 +334,5 @@ public struct LogStore: Sendable {
         }
         let byDay = Dictionary(rows.map { ($0.logicalDay, $0) }, uniquingKeysWith: { a, _ in a })
         return LogicalDay.range(start, through: end).map { byDay[$0] ?? .empty($0) }
-    }
-
-    // MARK: Helpers
-
-    /// The one-running-per-kind rule is checked here first (for a typed error)
-    /// and again by a database trigger (the backstop for any other writer).
-    private func write<T>(_ body: (Database) throws -> T) throws -> T {
-        try database.write(body)
     }
 }

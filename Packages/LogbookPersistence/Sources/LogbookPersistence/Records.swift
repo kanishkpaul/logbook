@@ -71,6 +71,7 @@ public struct Food: Hashable, Identifiable, Sendable {
     @Column("created_at") public var createdAt: Date
     @Column("updated_at") public var updatedAt: Date
     @Column("archived_at") public var archivedAt: Date?
+    @Column("import_batch_id") public var importBatchID: ImportBatch.ID?
 
     public var nutrition: Nutrition {
         Nutrition(kcal: kcal, proteinG: proteinG, caffeineMg: caffeineMg)

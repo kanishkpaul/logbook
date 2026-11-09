@@ -18,6 +18,7 @@ public enum Schema {
         migrator.registerMigration("v1: logging tables", migrate: v1)
         migrator.registerMigration("v1: daily_facts views", migrate: v1Views)
         migrator.registerMigration("v1: change log triggers", migrate: v1ChangeLog)
+        migrator.registerMigration("v2: food import batch", migrate: v2FoodImportBatch)
         return migrator
     }
 
@@ -308,6 +309,16 @@ public enum Schema {
             LEFT JOIN "daily_metric" burn ON burn."logical_day" = d."logical_day" AND burn."metric_key" = 'active_kcal'
             LEFT JOIN "daily_metric" steps ON steps."logical_day" = d."logical_day" AND steps."metric_key" = 'steps';
             """)
+    }
+
+    // MARK: v2
+
+    /// Library foods created by an import remember their batch, so undo can remove them.
+    static func v2FoodImportBatch(_ db: Database) throws {
+        try db.execute(sql: """
+            ALTER TABLE "food" ADD COLUMN "import_batch_id" TEXT REFERENCES "import_batch"("id") ON DELETE SET NULL
+            """)
+        try installChangeLogTriggers(db, table: "food")
     }
 
     // MARK: Change log

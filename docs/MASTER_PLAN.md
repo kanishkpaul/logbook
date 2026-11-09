@@ -53,7 +53,7 @@ Your current Notes format and where each line goes:
 | Daily nutrition totals | `$ 1616 / 102 / 220` | **Computed** |
 | Burn + steps | `burn - 373 / 11,773 steps` | `metric_sample` (active_kcal, steps) |
 | Net calories | `$ 1243 / 102 / 220` | **Computed**: intake − logged burn, labelled honestly (logged burn is not total expenditure) |
-| Nature's call | `nc -> 1550 - 1708 [1h 18m] [13m / 17m / 48m]` | `time_block` kind=nature_call, with optional sub-segments (13 + 17 + 48 = 78 min) |
+| Nature's call | `nc -> 1550 - 1708 [1h 18m] [13m / 17m / 48m]` | `time_block` kind=nature_call; only the total is stored, the parts stay in `raw_text` |
 | Sleep | `sleep -> 0045 - 0930 [8h 45m]` | `time_block` kind=sleep, crossing midnight handled |
 | Estimates | `~1290 / 28 / 0` | `is_estimate = true` on the row; shown with a subtle `~` and down-weighted in insights |
 
@@ -75,7 +75,7 @@ Planning tables (`task_list`, `task`, `plan_block`, `plan_template`, `external_e
 
 All rows use UUID keys and keep `source` (manual / timer / import), `raw_text` and `deleted_at` (soft delete).
 
-### The day boundary (needs your decision, §16)
+### The day boundary (decided: calendar day, §16)
 
 Your notes are grouped by calendar date, but your days don't follow the calendar. On 10 Oct you worked 01:00–03:30 and then slept 05:15–10:55; that 01:00 block is really the tail of 9 Oct. Two options:
 
@@ -335,11 +335,11 @@ Each milestone ends with a working app you can use daily.
 
 ## 16. Decisions needed from you
 
-1. **Day boundary:** A (calendar day, like your notes) or B (personal day start, e.g. 05:00)?
-2. **Missing weeks:** where are 12 Oct → today? Still in Apple Notes? (Paste them in, or I read them once with your OK.)
+1. ~~**Day boundary**~~ — decided 9 Nov 2026: **A, calendar day** (`DayBoundary.standard`). Sleep still counts toward the day you wake up.
+2. **Missing weeks:** where are 12 Oct → today? — deferred 9 Nov 2026: you'll add the data later through the importer (format in [IMPORT_FORMAT.md](IMPORT_FORMAT.md)).
 3. **What counts as "work":** today every `>` block counts (study, exams, calls, misc). Keep that, or tag some as non-work?
 4. **Targets:** set any now (protein g, caffeine cap mg, work hours, sleep hours, bedtime), or leave them unset and let baselines do the work?
-5. **NC sub-durations** `[13m / 17m / 48m]`: what do the three parts mean, so they can be labelled properly?
+5. ~~**NC sub-durations**~~ — decided 9 Nov 2026: only the total (start → end) is stored; the parts stay in `raw_text`.
 6. ~~**Project folder**~~ — decided: `~/Downloads/GitHub/logbook`, repo `kanishkpaul/logbook` (private).
 7. **Paid Apple account:** confirm "not now" (everything up to M10 works without it).
 8. **Existing to-dos and calendar:** where do your tasks and plans live today (Apple Reminders, Apple Calendar, Things, Notion, paper)? Import once, keep reading them, or start fresh?
@@ -353,7 +353,7 @@ Each milestone ends with a working app you can use daily.
 |---|---|
 | Wrong day attribution corrupts every metric | Fixed on write, per-kind rules, heavy tests, decision #1 above |
 | Importer misreads messy lines | Preview, warnings, keep raw text, batch undo, golden tests from real lines |
-| Menu bar label stops refreshing | Spike in M0; `NSStatusItem` fallback |
+| Menu bar label stops refreshing | Confirmed in M0 for `MenuBarExtra` + timer label; using `NSStatusItem` (verified) |
 | Planning features make logging slower or the app cluttered | Logging paths stay untouched; Tasks and Calendar are their own screens; plan layer can be hidden; adherence never shown in red |
 | Insights feel obvious or wrong | Data gates, confidence shown, few cards, dismiss memory |
 | AI invents numbers | It never sees raw data or writes digits; validation + templates |

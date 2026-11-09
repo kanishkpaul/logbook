@@ -4,6 +4,7 @@ import SwiftUI
 /// M0 spike window: one row per check, with the action that exercises it.
 struct SpikeView: View {
     let model: SpikeModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Form {
@@ -61,14 +62,13 @@ struct SpikeView: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear { model.openMainWindow = { openWindow(id: "main") } }
     }
 }
 
 /// The menu bar panel: timer control and a way back to the window.
 struct MenuBarPanel: View {
     let model: SpikeModel
-    @Environment(\.openWindow) private var openWindow
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let start = model.timerStart {
@@ -80,7 +80,10 @@ struct MenuBarPanel: View {
                 Button(model.timerStart == nil ? "Start study" : "Stop") { model.toggleTimer() }
                     .keyboardShortcut(.defaultAction)
                 Spacer()
-                Button("Open Logbook") { openWindow(id: "main") }
+                Button("Open Logbook") {
+                    NSApplication.shared.activate()
+                    model.openMainWindow?()
+                }
             }
             Divider()
             Button("Quit") { NSApplication.shared.terminate(nil) }

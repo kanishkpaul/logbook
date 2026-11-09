@@ -23,6 +23,10 @@ public struct DayBoundary: Hashable, Sendable, Codable {
     /// Option A: the calendar day.
     public static let calendarDay = DayBoundary(hour: 0)
 
+    /// The boundary the app writes with (master plan §16, decision #1,
+    /// 9 Nov 2026: calendar day). Changing it affects new rows only.
+    public static let standard = calendarDay
+
     public var hour: Int { startMinutes / 60 }
     public var minute: Int { startMinutes % 60 }
 

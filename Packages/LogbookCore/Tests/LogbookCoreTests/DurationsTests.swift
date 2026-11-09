@@ -22,6 +22,11 @@ import Testing
         #expect(Durations.parseCompact(text) == nil)
     }
 
+    @Test(arguments: [(0.0, "0:00"), (4.9, "0:04"), (725, "12:05"), (4360, "1:12:40"), (-5, "0:00"), (36000, "10:00:00")])
+    func clock(seconds: Double, text: String) {
+        #expect(Durations.clock(seconds) == text)
+    }
+
     @Test func roundsToNearestMinute() {
         #expect(Durations.minutes(89) == 1)
         #expect(Durations.minutes(91) == 2)

@@ -31,6 +31,16 @@ public enum Durations {
         compact(minutes: minutes(seconds))
     }
 
+    /// A running-timer clock: `0:04`, `12:05`, `1:12:40` (minutes:seconds under
+    /// an hour, hours:minutes:seconds after). Negative input clamps to zero.
+    public static func clock(_ seconds: TimeInterval) -> String {
+        let s = max(0, Int(seconds.rounded(.down)))
+        let h = s / 3600, m = (s % 3600) / 60, r = s % 60
+        return h > 0
+            ? String(format: "%d:%02d:%02d", h, m, r)
+            : String(format: "%d:%02d", m, r)
+    }
+
     /// Parses the compact style back (`1h`, `45m`, `1h 18m`, `2h30m`).
     public static func parseCompact(_ text: String) -> Int? {
         let s = text.lowercased().replacingOccurrences(of: " ", with: "")

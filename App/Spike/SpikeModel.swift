@@ -1,3 +1,4 @@
+import AppKit
 import EventKit
 import Foundation
 import LogbookPersistence
@@ -22,6 +23,9 @@ final class SpikeModel {
 
     /// A running timer is just a stored start instant; elapsed = now − start.
     private(set) var timerStart: Date?
+
+    /// Set by the main window's scene so the menu bar popover can reopen it.
+    @ObservationIgnored var openMainWindow: (() -> Void)?
     let timerTitle = "study"
 
     private let defaults = UserDefaults.standard
@@ -130,8 +134,10 @@ final class SpikeModel {
             "calendar": calendar,
             "calendarCount": calendarCount.map(String.init) ?? "-",
             "database": database,
+            "statusItemWindows": Self.statusItemWindows(),
         ]
         print("SPIKE", status.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+        fflush(stdout)
         let dir = URL.applicationSupportDirectory.appending(path: "logbook", directoryHint: .isDirectory)
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -140,6 +146,19 @@ final class SpikeModel {
         } catch {
             lastError = "record: \(error.localizedDescription)"
         }
+    }
+
+    /// Frames of this app's status-bar windows (the MenuBarExtra item), to tell
+    /// "not created" from "created but hidden" (e.g. behind the notch).
+    static func statusItemWindows() -> String {
+        let frames = NSApplication.shared.windows
+            .filter { String(describing: type(of: $0)).contains("StatusBar") }
+            .map { w in
+                let f = w.frame
+                return "\(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))x\(Int(f.height)) visible=\(w.isVisible) occl=\(w.occlusionState.contains(.visible))"
+            }
+        let screen = NSScreen.main.map { "screen=\(Int($0.frame.width))x\(Int($0.frame.height)) safeTop=\(Int($0.safeAreaInsets.top))" } ?? "no screen"
+        return (frames.isEmpty ? "none" : frames.joined(separator: "; ")) + " | " + screen
     }
 
     // MARK: Descriptions

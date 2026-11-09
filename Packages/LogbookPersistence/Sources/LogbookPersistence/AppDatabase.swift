@@ -12,7 +12,7 @@ public enum AppDatabase {
     public static let fileName = "logbook.sqlite"
 
     /// The live on-disk database (WAL mode via `DatabasePool`), migrated.
-    public static func openLive(directory: URL = defaultDirectory) throws -> DatabasePool {
+    public static func openLive(directory: URL = defaultDirectory, fileName: String = fileName) throws -> DatabasePool {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let pool = try DatabasePool(path: directory.appending(path: fileName).path, configuration: configuration())
         try Schema.migrator.migrate(pool)
