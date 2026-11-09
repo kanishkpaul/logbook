@@ -44,12 +44,22 @@ Leading list markers (`- `, `* `, `• `) and heading marks (`#`) are stripped f
 | **Nature's call** | `nc -> HHMM - HHMM [dur] [parts…]` | `time_block` kind `nature_call`; only the total is stored |
 | **Burn** | `burn - 373` or `burn - 373 / 11,773 steps` or `burn 373 11773` | metric samples `active_kcal` (and `steps`) |
 | **Steps** | `steps 11773` or `11,773 steps` | metric sample `steps` |
-| **Food with values** | `name [qty] - kcal / protein / caffeine` (1–3 numbers; units like `g`/`mg` are ignored) | `food_log_entry` with those values snapshotted |
+| **Food with values** | `name [qty] - kcal / protein / caffeine / nicotine` (see *Values* below) | `food_log_entry` with those values snapshotted |
 | **Food without values** | any other line, e.g. `Chicken roll`, `50rs puchka` | `food_log_entry` flagged *needs values*, or filled from the library (as an estimate) if the name matches a food |
-| **Total** | `$ 6h 30m` or `$ 1616 / 102 / 220` | **not stored**; checked against what the app computes, mismatches become warnings |
+| **Total** | `$ 6h 30m` or `$ 1,616 / 102 / 220` | **not stored**; checked against what the app computes, mismatches become warnings |
 | **Ignored** | blank lines, ```` ``` ```` fences, `\|` table rows, `---`, headings that aren't dates | — |
 
 Times are `HHMM`, `HMM` or `H:MM` (24-hour); `2400` means midnight at the end of the day.
+
+## Values
+
+After the last ` - ` on a food line (or after `$`):
+
+- **Untagged numbers are positional:** kcal / protein / caffeine / nicotine. `408 / 8 / 0` means what it always did; a 4th number is nicotine (mg).
+- **Tagged numbers go where the tag says**, anywhere in the list: `60c` carbs, `12f` fat, `8p` protein, `110caf` caffeine, `2nic` nicotine. Example: `dal 200g - 180 / 9 / 0 / 0 / 25c / 4f`, or just `zyn - 6nic`.
+- Unit suffixes `kcal`, `cal`, `g`, `gm`, `mg` count as untagged. Separators: `/`, `,` or spaces. `1,616` is one number.
+- A `~` anywhere marks the values as an estimate.
+- Fields the line doesn't give are filled from the dictionary entry (scaled), so macros are counted even when you only type `kcal / protein / caffeine`.
 
 ## Rules
 
@@ -59,7 +69,7 @@ Times are `HHMM`, `HMM` or `H:MM` (24-hour); `2400` means midnight at the end of
 - **Food time** isn't in the notes, so food is stored at 12:00 on the header's date; `13:30 pulao …` (with a colon) sets the time.
 - **Estimates:** a `~` before the name or the numbers sets `is_estimate`.
 - **Quantities:** a trailing `250g`, `50 ml`, `2 tsp`, `x2` on the name is stored as quantity + unit; the name without it is used for library matching.
-- **Food library:** each new food name with typed values (not estimates) becomes a library food, with the logged quantity as its serving. Later lines with the same name and no values are filled from it, scaled by quantity when the units match.
+- **Dictionary (food library):** each new food name with typed values (not estimates) becomes a dictionary entry, with the logged quantity as its serving. Later lines with the same name (or an alias) and no values are filled from it, scaled by quantity when the units match, or by `x2`. Nicotine products (`cigarette`, `pouch`…) are dictionary entries too.
 - **`[dur]` brackets** are checked against the times; a mismatch is a warning. Extra brackets (nature's-call parts) are kept only in `raw_text`.
 - **Year:** a header without a year uses the previous header's year (rolling over from Dec to Jan), else `--year`.
 

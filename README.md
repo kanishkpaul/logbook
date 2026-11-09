@@ -13,7 +13,7 @@
 
 <br/>
 
-![Status](https://img.shields.io/badge/status-M2%20importer-BF5AF2?style=flat-square)
+![Status](https://img.shields.io/badge/status-M3%20daily%20driver-BF5AF2?style=flat-square)
 ![Platform](https://img.shields.io/badge/macOS-27-1D1D1F?style=flat-square&logo=apple&logoColor=white)
 ![Swift](https://img.shields.io/badge/Swift-6.4-F05138?style=flat-square&logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-5E5CE6?style=flat-square)
@@ -199,7 +199,7 @@ logbook/
 | 🟡 | **M0 · Spike** | Ad-hoc build runs; live DB opens; menu bar timer ticks (via `NSStatusItem`). Permission-survival checks need a manual pass ([checklist](docs/M0_SPIKE.md)) |
 | ✅ | **M1 · Foundation** | Schema, day attribution (calendar day) and `daily_facts`; date-maths matrix passing |
 | 🟡 | **M2 · Import history** | Importer built: preview, undo, food library seeding ([format](docs/IMPORT_FORMAT.md)). Waiting for the real logs |
-| ⬜️ | **M3 · Daily driver** | Today, Quick Entry, timers, menu bar, Close the day; **Notes retired** |
+| 🟡 | **M3 · Daily driver** | Built: Today, Quick Entry (⌥Space), timers, menu bar, Close the day, food dictionary with macros + nicotine. Next: use it daily and retire Notes |
 | ⬜️ | **M4 · Food** | Library, favourites, meals, caffeine curve, protein tracking |
 | ⬜️ | **M5 · Charts & trends** | Calendar (actual layer), Work, Sleep, Body and Trends screens with baselines |
 | ⬜️ | **M6 · Plan** | To-do lists, time-blocking calendar, templates, plan vs actual, Apple Calendar overlay |
@@ -223,7 +223,7 @@ logbook/
 ## Building
 
 > [!NOTE]
-> The app is currently the M0 spike window plus the data layer and importer. Opening it in Xcode asks once to "Trust & Enable" the package macros.
+> The app is usable day to day: Today, Quick Entry, timers in the menu bar, Close the day, Dictionary and Import. Opening it in Xcode asks once to "Trust & Enable" the package macros.
 
 Requirements: macOS 27, Xcode 27.2, Apple silicon. No paid Apple Developer account needed for the Mac app.
 

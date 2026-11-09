@@ -34,7 +34,7 @@ CREATE TABLE "food" (
   "created_at" TEXT NOT NULL,
   "updated_at" TEXT NOT NULL,
   "archived_at" TEXT
-, "import_batch_id" TEXT REFERENCES "import_batch"("id") ON DELETE SET NULL) STRICT;
+, "import_batch_id" TEXT REFERENCES "import_batch"("id") ON DELETE SET NULL, "carbs_g" REAL, "fat_g" REAL, "nicotine_mg" REAL) STRICT;
 
 CREATE TABLE "food_log_entry" (
   "id" TEXT PRIMARY KEY NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE "food_log_entry" (
   "created_at" TEXT NOT NULL,
   "updated_at" TEXT NOT NULL,
   "deleted_at" TEXT
-) STRICT;
+, "carbs_g" REAL, "fat_g" REAL, "nicotine_mg" REAL) STRICT;
 
 CREATE TABLE "goal" (
   "id" TEXT PRIMARY KEY NOT NULL,
@@ -180,9 +180,13 @@ WITH
       "logical_day",
       SUM("kcal") AS "kcal",
       SUM("protein_g") AS "protein_g",
+      SUM("carbs_g") AS "carbs_g",
+      SUM("fat_g") AS "fat_g",
       SUM("caffeine_mg") AS "caffeine_mg",
+      SUM("nicotine_mg") AS "nicotine_mg",
       COUNT(*) AS "food_entries",
-      SUM("kcal" IS NULL AND "protein_g" IS NULL AND "caffeine_mg" IS NULL) AS "food_needing_values",
+      SUM("kcal" IS NULL AND "protein_g" IS NULL AND "carbs_g" IS NULL AND "fat_g" IS NULL
+          AND "caffeine_mg" IS NULL AND "nicotine_mg" IS NULL) AS "food_needing_values",
       MAX("is_estimate") AS "food_estimated"
     FROM "food_log_entry"
     WHERE "deleted_at" IS NULL
@@ -197,7 +201,10 @@ SELECT
   b."nc_min" AS "nc_min",
   f."kcal" AS "kcal",
   f."protein_g" AS "protein_g",
+  f."carbs_g" AS "carbs_g",
+  f."fat_g" AS "fat_g",
   f."caffeine_mg" AS "caffeine_mg",
+  f."nicotine_mg" AS "nicotine_mg",
   f."food_entries" AS "food_entries",
   f."food_needing_values" AS "food_needing_values",
   burn."value" AS "burn_kcal",
@@ -257,37 +264,37 @@ END;
 CREATE TRIGGER "food_change_log_delete" AFTER DELETE ON "food"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', OLD."id", 'delete', json_object('id', OLD."id", 'name', OLD."name", 'aliases', OLD."aliases", 'serving_size', OLD."serving_size", 'serving_unit', OLD."serving_unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'is_favourite', OLD."is_favourite", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'archived_at', OLD."archived_at", 'import_batch_id', OLD."import_batch_id"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', OLD."id", 'delete', json_object('id', OLD."id", 'name', OLD."name", 'aliases', OLD."aliases", 'serving_size', OLD."serving_size", 'serving_unit', OLD."serving_unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'is_favourite', OLD."is_favourite", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'archived_at', OLD."archived_at", 'import_batch_id', OLD."import_batch_id", 'carbs_g', OLD."carbs_g", 'fat_g', OLD."fat_g", 'nicotine_mg', OLD."nicotine_mg"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
 END;
 
 CREATE TRIGGER "food_change_log_insert" AFTER INSERT ON "food"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'name', NEW."name", 'aliases', NEW."aliases", 'serving_size', NEW."serving_size", 'serving_unit', NEW."serving_unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'is_favourite', NEW."is_favourite", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'archived_at', NEW."archived_at", 'import_batch_id', NEW."import_batch_id"), NEW."updated_at");
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'name', NEW."name", 'aliases', NEW."aliases", 'serving_size', NEW."serving_size", 'serving_unit', NEW."serving_unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'is_favourite', NEW."is_favourite", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'archived_at', NEW."archived_at", 'import_batch_id', NEW."import_batch_id", 'carbs_g', NEW."carbs_g", 'fat_g', NEW."fat_g", 'nicotine_mg', NEW."nicotine_mg"), NEW."updated_at");
 END;
 
 CREATE TRIGGER "food_change_log_update" AFTER UPDATE ON "food"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', NEW."id", 'update', json_object('id', OLD."id", 'name', OLD."name", 'aliases', OLD."aliases", 'serving_size', OLD."serving_size", 'serving_unit', OLD."serving_unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'is_favourite', OLD."is_favourite", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'archived_at', OLD."archived_at", 'import_batch_id', OLD."import_batch_id"), json_object('id', NEW."id", 'name', NEW."name", 'aliases', NEW."aliases", 'serving_size', NEW."serving_size", 'serving_unit', NEW."serving_unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'is_favourite', NEW."is_favourite", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'archived_at', NEW."archived_at", 'import_batch_id', NEW."import_batch_id"), NEW."updated_at");
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food', NEW."id", 'update', json_object('id', OLD."id", 'name', OLD."name", 'aliases', OLD."aliases", 'serving_size', OLD."serving_size", 'serving_unit', OLD."serving_unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'is_favourite', OLD."is_favourite", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'archived_at', OLD."archived_at", 'import_batch_id', OLD."import_batch_id", 'carbs_g', OLD."carbs_g", 'fat_g', OLD."fat_g", 'nicotine_mg', OLD."nicotine_mg"), json_object('id', NEW."id", 'name', NEW."name", 'aliases', NEW."aliases", 'serving_size', NEW."serving_size", 'serving_unit', NEW."serving_unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'is_favourite', NEW."is_favourite", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'archived_at', NEW."archived_at", 'import_batch_id', NEW."import_batch_id", 'carbs_g', NEW."carbs_g", 'fat_g', NEW."fat_g", 'nicotine_mg', NEW."nicotine_mg"), NEW."updated_at");
 END;
 
 CREATE TRIGGER "food_log_entry_change_log_delete" AFTER DELETE ON "food_log_entry"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food_log_entry', OLD."id", 'delete', json_object('id', OLD."id", 'food_id', OLD."food_id", 'name', OLD."name", 'quantity', OLD."quantity", 'unit', OLD."unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'consumed_at', OLD."consumed_at", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food_log_entry', OLD."id", 'delete', json_object('id', OLD."id", 'food_id', OLD."food_id", 'name', OLD."name", 'quantity', OLD."quantity", 'unit', OLD."unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'consumed_at', OLD."consumed_at", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at", 'carbs_g', OLD."carbs_g", 'fat_g', OLD."fat_g", 'nicotine_mg', OLD."nicotine_mg"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
 END;
 
 CREATE TRIGGER "food_log_entry_change_log_insert" AFTER INSERT ON "food_log_entry"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food_log_entry', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'food_id', NEW."food_id", 'name', NEW."name", 'quantity', NEW."quantity", 'unit', NEW."unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'consumed_at', NEW."consumed_at", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food_log_entry', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'food_id', NEW."food_id", 'name', NEW."name", 'quantity', NEW."quantity", 'unit', NEW."unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'consumed_at', NEW."consumed_at", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at", 'carbs_g', NEW."carbs_g", 'fat_g', NEW."fat_g", 'nicotine_mg', NEW."nicotine_mg"), NEW."updated_at");
 END;
 
 CREATE TRIGGER "food_log_entry_change_log_update" AFTER UPDATE ON "food_log_entry"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food_log_entry', NEW."id", 'update', json_object('id', OLD."id", 'food_id', OLD."food_id", 'name', OLD."name", 'quantity', OLD."quantity", 'unit', OLD."unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'consumed_at', OLD."consumed_at", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), json_object('id', NEW."id", 'food_id', NEW."food_id", 'name', NEW."name", 'quantity', NEW."quantity", 'unit', NEW."unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'consumed_at', NEW."consumed_at", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'food_log_entry', NEW."id", 'update', json_object('id', OLD."id", 'food_id', OLD."food_id", 'name', OLD."name", 'quantity', OLD."quantity", 'unit', OLD."unit", 'kcal', OLD."kcal", 'protein_g', OLD."protein_g", 'caffeine_mg', OLD."caffeine_mg", 'consumed_at', OLD."consumed_at", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at", 'carbs_g', OLD."carbs_g", 'fat_g', OLD."fat_g", 'nicotine_mg', OLD."nicotine_mg"), json_object('id', NEW."id", 'food_id', NEW."food_id", 'name', NEW."name", 'quantity', NEW."quantity", 'unit', NEW."unit", 'kcal', NEW."kcal", 'protein_g', NEW."protein_g", 'caffeine_mg', NEW."caffeine_mg", 'consumed_at', NEW."consumed_at", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at", 'carbs_g', NEW."carbs_g", 'fat_g', NEW."fat_g", 'nicotine_mg', NEW."nicotine_mg"), NEW."updated_at");
 END;
 
 CREATE TRIGGER "metric_sample_change_log_delete" AFTER DELETE ON "metric_sample"

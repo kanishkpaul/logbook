@@ -1,5 +1,6 @@
 import AppKit
 import LogbookCore
+import LogbookUI
 import Observation
 import SwiftUI
 
@@ -12,38 +13,53 @@ import SwiftUI
 final class StatusItemController: NSObject {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
-    private let spike: SpikeModel
+    private let today: TodayModel
     private var ticker: Timer?
 
-    init(spike: SpikeModel) {
-        self.spike = spike
+    init(today: TodayModel, openMain: @escaping () -> Void) {
+        self.today = today
         super.init()
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: MenuBarPanel(model: spike))
+        popover.contentViewController = NSHostingController(rootView: MenuBarPanel(
+            model: today,
+            openMain: { [weak popover] in
+                popover?.performClose(nil)
+                openMain()
+            },
+            quit: { NSApplication.shared.terminate(nil) }
+        ))
         if let button = item.button {
             button.target = self
             button.action = #selector(togglePopover(_:))
             button.imagePosition = .imageLeading
             button.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+            button.toolTip = "Logbook"
         }
         observe()
     }
 
-    /// Re-renders whenever the timer starts or stops.
+    /// Re-renders whenever the set of running timers changes.
     private func observe() {
         withObservationTracking {
-            _ = spike.timerStart
+            _ = today.state?.running
         } onChange: { [weak self] in
             Task { @MainActor in self?.observe() }
         }
         render()
     }
 
+    /// The timer shown in the bar: work first, then whatever started first.
+    private var shown: TodayState.RunningTimer? {
+        let running = today.state?.running ?? []
+        return running.first { $0.kind == .work } ?? running.first
+    }
+
     private func render() {
         guard let button = item.button else { return }
-        if spike.timerStart != nil {
+        if let timer = shown {
+            let color = NSColor(timer.domain.color)
             button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: "running")?
-                .withSymbolConfiguration(.init(pointSize: 7, weight: .regular).applying(.init(paletteColors: [.systemIndigo])))
+                .withSymbolConfiguration(.init(pointSize: 7, weight: .regular).applying(.init(paletteColors: [color])))
             startTicking()
         } else {
             button.image = NSImage(systemSymbolName: "book.closed", accessibilityDescription: "Logbook")
@@ -66,8 +82,9 @@ final class StatusItemController: NSObject {
     }
 
     private func tick() {
-        guard let start = spike.timerStart, let button = item.button else { return }
-        button.title = " \(spike.timerTitle) \(Durations.clock(Date().timeIntervalSince(start)))"
+        guard let timer = shown, let button = item.button else { return }
+        let extra = (today.state?.running.count ?? 1) > 1 ? " +\((today.state?.running.count ?? 1) - 1)" : ""
+        button.title = " \(timer.title) \(Durations.clock(Date().timeIntervalSince(timer.start)))\(extra)"
     }
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {

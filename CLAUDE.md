@@ -5,10 +5,12 @@ Private, single-user native macOS logbook (work blocks, food with kcal/protein/c
 **Read first:** `docs/MASTER_PLAN.md` (what we're building and in what order) and `docs/research/stack-and-architecture-report.md` (why).
 
 ## Status
-M0 spike built; menu bar timer verified (via `NSStatusItem`, see `docs/M0_SPIKE.md`); permission-survival checks still need the user's clicks. M1 foundation built. M2 importer built (parser, preview, apply, undo, `logbook-import` CLI; format in `docs/IMPORT_FORMAT.md`); the user adds their real data later. Next: M3 daily driver. Decisions so far: day boundary = calendar day (`DayBoundary.standard`); NC stores only the total. Other open decisions are in master plan §16. Don't build past them without asking.
+M3 daily driver built: Today (heroes vs 28-day baselines, 24-hour track, caffeine/nicotine in system, day log), Quick Entry (⌥Space panel, ⌘L, in Today and the menu bar), real timers in the menu bar (`NSStatusItem`), forgotten-timer guard, Close the day, Dictionary (full macros + nicotine), Import (paste). M0 permission-survival checks still need the user's clicks. Decisions: calendar day (`DayBoundary.standard`); NC stores only the total; every `>` block is work; no targets (baselines only). Next: M4 food polish / M5 charts. Other open decisions are in master plan §16. Don't build past them without asking.
 
 ## Commands
-- `make test` — `swift test` for Core, Persistence and Import (fast; use this most).
+- `make test` — `swift test` for Core, Persistence, Import and UI (fast; use this most).
+- `make render` — renders key views on synthetic data to `build/shots/*.png` (ImageRenderer can't draw AppKit text fields/forms; those show as blanks).
+- `make demo DIR=/tmp/logbook-demo` — runs the app on a scratch data folder (`LOGBOOK_DATA_DIR`), never the real log. Seed it with `logbook-import apply … --db $DIR/logbook.sqlite`.
 - `make build` / `make run` — xcodebuild Debug into `build/DD`, then open.
 - `make format-check` — after every `xcrun xcodeproj` change.
 - `make schema` — regenerate `Packages/LogbookPersistence/schema.sql`.
@@ -18,9 +20,9 @@ M0 spike built; menu bar timer verified (via `NSStatusItem`, see `docs/M0_SPIKE.
 - xcodebuild needs `-skipMacroValidation` (package macros); the Makefile passes it.
 
 ## Module map (dependencies point down)
-- `App/` (synced folder, MainActor default): entry point, `MenuBar/StatusItemController` (NSStatusItem; **don't use `MenuBarExtra` with a timer label**: it layout-loops on macOS 27), system services (notifications, login item, EventKit). `App/Spike/` is the M0 spike and gets replaced in M3.
-- `Packages/LogbookImport`: `ShorthandParser` (pure) → `ImportPlanner` (preview against the DB) → `Importer.apply/undo`, plus the `logbook-import` executable. Depends on Core and Persistence. Fixtures are synthetic only.
-- `Packages/LogbookUI`: design system (`Domain` colours/symbols) and views. MainActor default. Depends on Core.
+- `App/` (synced folder, MainActor default): `LogbookApp` (AppDelegate owns store + models), `MenuBar/` (`StatusItemController` — NSStatusItem; **don't use `MenuBarExtra` with a timer label**: it layout-loops on macOS 27 — and `QuickEntryPanel` + Carbon `GlobalHotKey` with fallbacks), `Diagnostics/` (permissions, DB status, writes spike-status.json).
+- `Packages/LogbookImport`: the shorthand everywhere: `ShorthandParser` (pure; values grammar kcal/protein/caffeine/nicotine + tags `c f p caf nic`), `FoodResolver` (dictionary rules shared by import and Quick Entry), `ImportPlanner` → `Importer.apply/undo`, `QuickEntry` (interpret → preview → commit, timer commands), `NutritionInput`, and the `logbook-import` executable. Depends on Core and Persistence. Fixtures are synthetic only.
+- `Packages/LogbookUI`: `Today/` (`TodayModel` observes `LogStore.observe`; `TodayPresenter` is pure and tested and does all presentation maths via Core; views only lay out `TodayState`), `Dictionary/`, `Shell/` (Root, Import, Settings, MenuBarPanel, `PreviewSupport` synthetic data). MainActor default. Depends on Core, Persistence, Import.
 - `Packages/LogbookPersistence`: `Schema` (append-only migrations, triggers, views), `@Table` records, `LogStore` (the only write path; applies attribution on write; its pure `…Row` builders let callers batch rows in one transaction), `AppDatabase`. Depends on Core, GRDB, SQLiteData. Record memberwise inits are internal: build rows through `LogStore`.
 - `Packages/LogbookCore`: pure value types and maths, no dependencies.
 - SQL is snake_case; Swift is camelCase via `@Column("...")`. Dates are UTC text `yyyy-MM-dd HH:mm:ss.SSS`, UUIDs lowercase text.

@@ -89,14 +89,15 @@ public struct LogStore: Sendable {
         let t = now(), tz = tzOverride ?? timeZone()
         let at = consumedAt ?? t
         let snapshot = nutrition ?? food?.nutrition.scaled(by: servings) ?? Nutrition()
-        return FoodLogEntry(
+        var entry = FoodLogEntry(
             id: id ?? uuid(), foodID: food?.id, name: name, quantity: quantity, unit: unit,
-            kcal: snapshot.kcal, proteinG: snapshot.proteinG, caffeineMg: snapshot.caffeineMg,
             consumedAt: at, tzIdentifier: tz.identifier,
             logicalDay: boundary.logicalDay(containing: at, in: tz),
             isEstimate: isEstimate, source: source, importBatchID: importBatchID, rawText: rawText,
             createdAt: t, updatedAt: t
         )
+        entry.nutrition = snapshot
+        return entry
     }
 
     public func foodRow(
@@ -108,11 +109,12 @@ public struct LogStore: Sendable {
         id: UUID? = nil
     ) -> Food {
         let t = now()
-        return Food(
+        var food = Food(
             id: id ?? uuid(), name: name, servingSize: servingSize, servingUnit: servingUnit,
-            kcal: nutrition.kcal, proteinG: nutrition.proteinG, caffeineMg: nutrition.caffeineMg,
             createdAt: t, updatedAt: t, importBatchID: importBatchID
         )
+        food.nutrition = nutrition
+        return food
     }
 
     public func metricSampleRow(
@@ -256,11 +258,7 @@ public struct LogStore: Sendable {
         return try database.write { db in
             guard var food = try Food.find(id).fetchOne(db) else { throw Failure.notFound(id) }
             if let name { food.name = name }
-            if let nutrition {
-                food.kcal = nutrition.kcal
-                food.proteinG = nutrition.proteinG
-                food.caffeineMg = nutrition.caffeineMg
-            }
+            if let nutrition { food.nutrition = nutrition }
             food.updatedAt = t
             try Food.update(food).execute(db)
             return food

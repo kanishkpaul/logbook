@@ -196,18 +196,47 @@ public struct ShorthandParser: Sendable {
         s.matches(of: /\d[\d,]*(?:\.\d+)?/).compactMap { Double($0.output.replacingOccurrences(of: ",", with: "")) }
     }
 
-    /// `408 / 8 / 0`, `~1290 / 28 / 0`, `408kcal / 8g` → nutrition (1–3 values) and estimate flag.
+    /// The values part of a food or total line.
+    ///
+    /// Untagged numbers are positional — kcal / protein / caffeine / nicotine —
+    /// by their position in the list, so `408 / 8 / 0` keeps meaning what it
+    /// always did. Tagged numbers go where the tag says, anywhere in the list:
+    /// `60c` carbs, `12f` fat, `8p` protein, `110caf` caffeine, `2nic` nicotine.
+    /// Unit suffixes `kcal`, `cal`, `g`, `gm`, `mg` count as untagged.
+    /// Separators: `/`, `,` or spaces. A `~` anywhere marks an estimate.
     static func values(_ s: String) -> (Nutrition, Bool)? {
-        let parts = s.split(separator: "/", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
-        guard (1...3).contains(parts.count) else { return nil }
-        var nums: [Double] = []
+        // `1,616` is one number (thousands separator), not two.
+        let s = s.replacing(/(\d),(\d{3})(?!\d)/) { "\($0.1)\($0.2)" }
+        let token = /(~?)\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]*)/
+        let matches = s.matches(of: token)
+        guard !matches.isEmpty else { return nil }
+        // Everything between tokens must be separators.
+        var leftover = s
+        for m in matches.reversed() { leftover.removeSubrange(m.range) }
+        guard leftover.allSatisfy({ $0 == "/" || $0 == "," || $0.isWhitespace }) else { return nil }
+
+        let positional: [WritableKeyPath<Nutrition, Double?>] = [\.kcal, \.proteinG, \.caffeineMg, \.nicotineMg]
+        var n = Nutrition()
         var estimate = false
-        for p in parts {
-            guard let m = p.wholeMatch(of: /(~?)\s*(\d+(?:\.\d+)?)\s*(?:kcal|cal|g|gm|mg)?/.ignoresCase()) else { return nil }
+        for (index, m) in matches.enumerated() {
             if !m.1.isEmpty { estimate = true }
-            nums.append(Double(m.2)!)
+            let value = Double(m.2)!
+            let field: WritableKeyPath<Nutrition, Double?>
+            switch m.3.lowercased() {
+            case "", "kcal", "cal", "g", "gm", "mg":
+                guard index < positional.count else { return nil }
+                field = positional[index]
+            case "p", "pro", "prot", "protein": field = \.proteinG
+            case "c", "carb", "carbs": field = \.carbsG
+            case "f", "fat": field = \.fatG
+            case "caf", "caff", "caffeine": field = \.caffeineMg
+            case "nic", "nicotine": field = \.nicotineMg
+            default: return nil
+            }
+            guard n[keyPath: field] == nil else { return nil }
+            n[keyPath: field] = value
         }
-        return (Nutrition(kcal: nums[0], proteinG: nums.count > 1 ? nums[1] : nil, caffeineMg: nums.count > 2 ? nums[2] : nil), estimate)
+        return (n, estimate)
     }
 
     static func food(_ s: String) -> ParsedFood {

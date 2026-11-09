@@ -5,8 +5,13 @@ import GRDB
 public enum AppDatabase {
     /// `~/Library/Application Support/logbook/`. Never inside a synced folder:
     /// only backups/snapshots may be mirrored to iCloud Drive.
+    /// `LOGBOOK_DATA_DIR` overrides it (for trying the app on synthetic data
+    /// without touching the real log).
     public static var defaultDirectory: URL {
-        URL.applicationSupportDirectory.appending(path: "logbook", directoryHint: .isDirectory)
+        if let dir = ProcessInfo.processInfo.environment["LOGBOOK_DATA_DIR"], !dir.isEmpty {
+            return URL(filePath: dir, directoryHint: .isDirectory)
+        }
+        return URL.applicationSupportDirectory.appending(path: "logbook", directoryHint: .isDirectory)
     }
 
     public static let fileName = "logbook.sqlite"
@@ -31,6 +36,11 @@ public enum AppDatabase {
         config.foreignKeysEnabled = true
         config.label = "logbook"
         return config
+    }
+
+    /// The app's store: the live database, migrated, with the standard day boundary.
+    public static func liveStore() throws -> LogStore {
+        LogStore(database: try openLive(), boundary: .standard)
     }
 
     /// Number of tables, a cheap "is the database open and migrated" check.

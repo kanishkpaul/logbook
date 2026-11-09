@@ -47,8 +47,7 @@ public struct ImportPlanner: Sendable {
         var plan = ImportPlan(batch: batch, issues: doc.issues)
 
         try store.database.read { db in
-            let library = try LibraryIndex(db: db)
-            var newFoodsByKey: [String: Food] = [:]
+            var resolver = FoodResolver(library: try LibraryIndex(db: db), dictionaryValuesAreEstimates: true)
             guard let stepsDef = try LogStore.metricDefinition(key: "steps", in: db),
                   let burnDef = try LogStore.metricDefinition(key: "active_kcal", in: db)
             else { throw LogStore.Failure.unknownMetric("steps/active_kcal") }
@@ -58,7 +57,7 @@ public struct ImportPlanner: Sendable {
                 var occurrences: [String: Int] = [:]
                 var typedWork: [(Int, SourceLine)] = []
                 var typedTotals: [(Nutrition, SourceLine)] = []
-                var intake = Nutrition.zero
+                var intake = Nutrition()
                 var burn: Double?
 
                 func stableID(_ line: SourceLine, _ part: String = "") -> UUID {
@@ -102,41 +101,30 @@ public struct ImportPlanner: Sendable {
                     case .food(let f):
                         let id = stableID(line)
                         let consumedAt = WallTime(day: day.date, minutes: f.timeMinutes ?? 12 * 60).date(in: timeZone)
-                        var food = library.match(f.matchKey) ?? newFoodsByKey[f.matchKey]
-                        var nutrition = f.nutrition
-                        var isEstimate = f.isEstimate
-                        var servings = 1.0
-
-                        if f.nutrition != nil, food == nil, !f.isEstimate {
-                            // First typed occurrence seeds the library.
-                            let seeded = store.foodRow(
-                                name: f.baseName, nutrition: f.nutrition!, servingSize: f.quantity, servingUnit: f.unit,
-                                importBatchID: batch.id, id: Self.stableUUID("logbook-import|food|\(f.matchKey)")
-                            )
-                            if try !exists(Food.self, seeded.id) {
-                                newFoodsByKey[f.matchKey] = seeded
-                                plan.newFoods.append(seeded)
-                            }
-                            food = seeded
-                        } else if f.nutrition == nil {
-                            if let food {
-                                servings = Self.servings(quantity: f.quantity, unit: f.unit, of: food)
-                                nutrition = food.nutrition.scaled(by: servings)
-                                isEstimate = true
-                                issue(.info, .valuesFromLibrary, line, "values for “\(f.name)” taken from the library (estimate)")
+                        var r = resolver.resolve(f, store: store, importBatchID: batch.id,
+                                                 newFoodID: Self.stableUUID("logbook-import|food|\(f.matchKey)"))
+                        if let new = r.newFood {
+                            if try exists(Food.self, new.id) {
+                                // Seeded by an earlier run of this file: use it, don't recreate it.
+                                r.food = try Food.find(new.id).fetchOne(db)
                             } else {
-                                issue(.info, .needsValues, line, "“\(f.name)” has no values yet")
+                                plan.newFoods.append(new)
                             }
                         }
-                        intake.kcal! += nutrition?.kcal ?? 0
-                        intake.proteinG! += nutrition?.proteinG ?? 0
-                        intake.caffeineMg! += nutrition?.caffeineMg ?? 0
-                        summary.kcal += nutrition?.kcal ?? 0
+                        switch r.note {
+                        case .valuesFromLibrary?:
+                            issue(.info, .valuesFromLibrary, line, "values for “\(f.name)” taken from the dictionary (estimate)")
+                        case .needsValues?:
+                            issue(.info, .needsValues, line, "“\(f.name)” has no values yet")
+                        default: break
+                        }
+                        intake = intake + (r.nutrition ?? Nutrition())
+                        summary.kcal += r.nutrition?.kcal ?? 0
                         if try exists(FoodLogEntry.self, id) { plan.alreadyImported += 1; continue }
                         plan.foodEntries.append(store.foodEntryRow(
-                            name: f.name, food: food, servings: servings, quantity: f.quantity, unit: f.unit,
-                            nutrition: nutrition, consumedAt: consumedAt, timeZone: timeZone,
-                            isEstimate: isEstimate, source: .import, rawText: line.text,
+                            name: f.name, food: r.food, servings: r.servings, quantity: f.quantity, unit: f.unit,
+                            nutrition: r.nutrition, consumedAt: consumedAt, timeZone: timeZone,
+                            isEstimate: r.isEstimate, source: .import, rawText: line.text,
                             importBatchID: batch.id, id: id
                         ))
                         summary.foods += 1
@@ -178,7 +166,8 @@ public struct ImportPlanner: Sendable {
                           "typed $ \(Durations.compact(minutes: typed)) but the work blocks add up to \(Durations.compact(minutes: summary.workMin))")
                 }
                 for (typed, line) in typedTotals {
-                    let net = Nutrition(kcal: intake.kcal! - (burn ?? 0), proteinG: intake.proteinG, caffeineMg: intake.caffeineMg)
+                    var net = intake
+                    net.kcal = (intake.kcal ?? 0) - (burn ?? 0)
                     if !Self.close(typed, intake) && !(burn != nil && Self.close(typed, net)) {
                         issue(.warning, .nutritionTotalMismatch, line,
                               "typed $ \(Self.format(typed)) but the foods add up to \(Self.format(intake))"
@@ -204,12 +193,6 @@ public struct ImportPlanner: Sendable {
                            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
     }
 
-    /// Servings of a library food for a logged quantity (same unit only).
-    static func servings(quantity: Double?, unit: String?, of food: Food) -> Double {
-        guard let quantity, let size = food.servingSize, size > 0, unit != nil, unit == food.servingUnit else { return 1 }
-        return quantity / size
-    }
-
     static func manualDuplicate(kind: BlockKind, start: Date, end: Date, in db: Database) throws -> Bool {
         try TimeBlock.where {
             $0.kind.eq(kind) && $0.startUTC.eq(start) && $0.endUTC.eq(end)
@@ -218,30 +201,15 @@ public struct ImportPlanner: Sendable {
     }
 
     /// Typed totals are rounded by hand; within 1 unit counts as a match.
+    /// Only the fields the total line gave are compared.
     static func close(_ typed: Nutrition, _ computed: Nutrition) -> Bool {
-        func ok(_ a: Double?, _ b: Double?) -> Bool {
-            guard let a else { return true }
-            return abs(a - (b ?? 0)) <= 1
+        Nutrition.fields.allSatisfy { f in
+            guard let a = typed[keyPath: f] else { return true }
+            return abs(a - (computed[keyPath: f] ?? 0)) <= 1
         }
-        return ok(typed.kcal, computed.kcal) && ok(typed.proteinG, computed.proteinG) && ok(typed.caffeineMg, computed.caffeineMg)
     }
 
     static func format(_ n: Nutrition) -> String {
-        [n.kcal, n.proteinG, n.caffeineMg].map { $0.map { String(format: "%g", $0.rounded()) } ?? "?" }.joined(separator: " / ")
+        NutritionFormat.summary(n)
     }
-}
-
-/// Library foods by lowercased name and aliases.
-struct LibraryIndex {
-    var byKey: [String: Food] = [:]
-
-    init(db: Database) throws {
-        for food in try Food.where({ $0.archivedAt.is(nil) }).fetchAll(db) {
-            byKey[ParsedFood.matchKey(food.name)] = byKey[ParsedFood.matchKey(food.name)] ?? food
-            let aliases = (try? JSONDecoder().decode([String].self, from: Data(food.aliases.utf8))) ?? []
-            for alias in aliases { byKey[ParsedFood.matchKey(alias)] = byKey[ParsedFood.matchKey(alias)] ?? food }
-        }
-    }
-
-    func match(_ key: String) -> Food? { byKey[key] }
 }

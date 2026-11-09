@@ -6,40 +6,27 @@ import Observation
 import ServiceManagement
 import UserNotifications
 
-/// M0 spike: checks that an ad-hoc build can run a live menu bar timer and keep
-/// notification, login-item and Calendar permissions across rebuilds.
+/// Permission and storage checks (from the M0 spike): notifications, login
+/// item, Calendar access and the live database.
 ///
-/// Each launch writes the current statuses to
+/// Each launch writes the statuses to
 /// `~/Library/Application Support/logbook/spike-status.json` (and stdout), so
-/// a rebuild-and-relaunch can be compared from the terminal.
+/// a rebuild-and-relaunch can be compared from the terminal (`make spike-status`).
 @Observable
-final class SpikeModel {
+final class DiagnosticsModel {
     private(set) var notifications = "unknown"
     private(set) var loginItem = "unknown"
     private(set) var calendar = "unknown"
     private(set) var calendarCount: Int?
     private(set) var database = "unknown"
-    private(set) var lastError: String?
+    var quickEntryShortcut = "unknown"
+    var lastError: String?
 
-    /// A running timer is just a stored start instant; elapsed = now − start.
-    private(set) var timerStart: Date?
+    @ObservationIgnored private let eventStore = EKEventStore()
+    @ObservationIgnored private let databaseCheck: () throws -> String
 
-    /// Set by the main window's scene so the menu bar popover can reopen it.
-    @ObservationIgnored var openMainWindow: (() -> Void)?
-    let timerTitle = "study"
-
-    private let defaults = UserDefaults.standard
-    private let eventStore = EKEventStore()
-
-    init() {
-        timerStart = defaults.object(forKey: "spike.timerStart") as? Date
-    }
-
-    // MARK: Timer
-
-    func toggleTimer() {
-        timerStart = timerStart == nil ? Date() : nil
-        defaults.set(timerStart, forKey: "spike.timerStart")
+    init(databaseCheck: @escaping () throws -> String) {
+        self.databaseCheck = databaseCheck
     }
 
     // MARK: Status
@@ -51,15 +38,8 @@ final class SpikeModel {
         let cal = EKEventStore.authorizationStatus(for: .event)
         calendar = Self.describe(cal)
         calendarCount = cal == .fullAccess ? eventStore.calendars(for: .event).count : nil
-        checkDatabase()
-    }
-
-    /// Opens (creating and migrating if needed) the live database. Writes no rows.
-    private func checkDatabase() {
         do {
-            let db = try AppDatabase.openLive()
-            let tables = try AppDatabase.tableCount(db)
-            database = "ok (\(tables) tables)"
+            database = try databaseCheck()
         } catch {
             database = "error"
             lastError = "database: \(error)"
@@ -84,11 +64,10 @@ final class SpikeModel {
 
     func sendTestNotification() async {
         let content = UNMutableNotificationContent()
-        content.title = "Logbook spike"
+        content.title = "Logbook"
         content.body = "Notifications work on this build."
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         do {
-            try await UNUserNotificationCenter.current().add(request)
+            try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
         } catch {
             lastError = "notify: \(error.localizedDescription)"
         }
@@ -123,11 +102,11 @@ final class SpikeModel {
     // MARK: Recording
 
     private func record() {
-        let exe = Bundle.main.executableURL
-        let built = exe.flatMap { try? FileManager.default.attributesOfItem(atPath: $0.path)[.modificationDate] as? Date }
+        let built = Bundle.main.executableURL.flatMap { try? FileManager.default.attributesOfItem(atPath: $0.path)[.modificationDate] as? Date }
+        let iso = ISO8601DateFormatter()
         let status: [String: String] = [
-            "launchedAt": ISO8601DateFormatter().string(from: Date()),
-            "binaryBuiltAt": built.map { ISO8601DateFormatter().string(from: $0) } ?? "?",
+            "launchedAt": iso.string(from: Date()),
+            "binaryBuiltAt": built.map { iso.string(from: $0) } ?? "?",
             "bundlePath": Bundle.main.bundlePath,
             "notifications": notifications,
             "loginItem": loginItem,
@@ -135,10 +114,11 @@ final class SpikeModel {
             "calendarCount": calendarCount.map(String.init) ?? "-",
             "database": database,
             "statusItemWindows": Self.statusItemWindows(),
+            "quickEntryShortcut": quickEntryShortcut,
         ]
         print("SPIKE", status.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
         fflush(stdout)
-        let dir = URL.applicationSupportDirectory.appending(path: "logbook", directoryHint: .isDirectory)
+        let dir = AppDatabase.defaultDirectory
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let data = try JSONSerialization.data(withJSONObject: status, options: [.prettyPrinted, .sortedKeys])
@@ -148,17 +128,12 @@ final class SpikeModel {
         }
     }
 
-    /// Frames of this app's status-bar windows (the MenuBarExtra item), to tell
-    /// "not created" from "created but hidden" (e.g. behind the notch).
+    /// Frames of this app's status-bar windows, to tell "not created" from "hidden".
     static func statusItemWindows() -> String {
         let frames = NSApplication.shared.windows
             .filter { String(describing: type(of: $0)).contains("StatusBar") }
-            .map { w in
-                let f = w.frame
-                return "\(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))x\(Int(f.height)) visible=\(w.isVisible) occl=\(w.occlusionState.contains(.visible))"
-            }
-        let screen = NSScreen.main.map { "screen=\(Int($0.frame.width))x\(Int($0.frame.height)) safeTop=\(Int($0.safeAreaInsets.top))" } ?? "no screen"
-        return (frames.isEmpty ? "none" : frames.joined(separator: "; ")) + " | " + screen
+            .map { w in "\(Int(w.frame.minX)),\(Int(w.frame.minY)) \(Int(w.frame.width))x\(Int(w.frame.height)) visible=\(w.isVisible)" }
+        return frames.isEmpty ? "none" : frames.joined(separator: "; ")
     }
 
     // MARK: Descriptions

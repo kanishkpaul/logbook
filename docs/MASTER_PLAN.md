@@ -63,8 +63,8 @@ Your current Notes format and where each line goes:
 |---|---|---|
 | `time_block` | Work, sleep, nature's call, and future custom kinds | Start/end stored as instants (UTC) plus time zone; `end = NULL` means a timer is running; `logical_day` fixed when written; optional `task_id` / `plan_block_id` link it to what was planned |
 | `category` | Work projects/tags (e.g. "project horizon", "study", "pocf") | Colour + SF Symbol per category |
-| `food` | Your food library: name, aliases, serving, kcal / protein / caffeine per serving | Editing the library never changes past days |
-| `food_log_entry` | What you ate | Copies the nutrition values at log time; quantity/multiplier; time eaten |
+| `food` | Your **dictionary** of everything you eat (and smoke): name, aliases, serving, kcal / protein / carbs / fat / caffeine / nicotine per serving | Editing the dictionary never changes past days |
+| `food_log_entry` | What you ate or smoked | Copies all six values at log time; quantity/multiplier; time consumed |
 | `metric_definition` / `metric_sample` | Steps, burn, and **any metric you add later** (weight, mood, water, gym sets…) | Typed, unit-aware, sum/avg/max/last aggregation |
 | `daily_facts` (SQL view) | One row per day: work min, sleep min, kcal, protein, caffeine, burn, steps, NC count/min | Feeds every chart and insight; computed, never stored |
 | `goal` | Optional targets (protein, caffeine cap, work hours, bedtime…) | Unset by default |
@@ -108,7 +108,7 @@ Sidebar app (`NavigationSplitView`) with system Liquid Glass chrome. Keyboard-fi
 
 | Screen | What's on it |
 |---|---|
-| **Today** | 5 pinned hero metrics (work today, net kcal, protein, caffeine in system now, last night's sleep), each with a one-line headline ("6 h 10 m, 40 m above your 4-week average") and a sparkline. Then **Up next** (the next planned block and today's top tasks), the **24-hour track** for today (plan ghosted behind actual), running timers, and up to 3 insight cards |
+| **Today** | 6 pinned hero metrics (work today, net kcal, protein, caffeine and nicotine in system now, last night's sleep), each with a one-line headline ("6 h 10 m, 40 m above your 4-week average") and a sparkline. Then **Up next** (the next planned block and today's top tasks), the **24-hour track** for today (plan ghosted behind actual), running timers, and up to 3 insight cards |
 | **Calendar** | Day / week / month grid with two layers: **Plan** (time blocks you scheduled, outlined) and **Actual** (logged sleep, work and NC blocks, food markers, caffeine curve, live "now" line). Drag tasks in to time-block them; templates; optional Apple Calendar overlay. Week view adds sleep/wake range bars and stacked work bars (see §9) |
 | **Tasks** | Inbox, Today, Upcoming, Someday, Done, and your lists; estimates vs actual time; drag a task onto the Calendar to block time for it (see §9) |
 | **Work** | Total per day, per project/category, deep-work blocks (≥ 50 min), first-start time, longest focus streak, hours by time of day |
@@ -117,7 +117,7 @@ Sidebar app (`NavigationSplitView`) with system Liquid Glass chrome. Keyboard-fi
 | **Body** | Burn, steps, NC frequency and duration (descriptive only) |
 | **Trends** | Any metric over 7d / 28d / 3m / 1y / all, compare two metrics, simple correlations with confidence shown |
 | **Review** | Weekly and monthly report pages: what changed, best days, consistency |
-| **Library** | Foods, categories, task lists, day/week templates, custom metrics, goals |
+| **Dictionary / Library** | The food dictionary (full macros, caffeine, nicotine, aliases, favourites), categories, task lists, day/week templates, custom metrics, goals |
 | **Import / Export** | Notes paste, file import with preview/undo, backups, JSON/CSV export |
 | **Settings** | Day boundary, targets, notification controls, quiet hours, caffeine half-life, appearance, hotkeys |
 
@@ -134,7 +134,7 @@ Sidebar app (`NavigationSplitView`) with system Liquid Glass chrome. Keyboard-fi
 | Area | Metrics |
 |---|---|
 | Work | Total/day; vs 7d and 28d average; per category; deep-work blocks; first start; last end; fragmentation (block count); weekly total; streak of days ≥ your target |
-| Food | kcal in; protein (daily and 7-day average vs target); caffeine total; **caffeine remaining at your usual bedtime** (half-life model, default 5 h, adjustable); last-caffeine time; foods logged; estimate share |
+| Food | kcal in; protein, carbs, fat (daily and 7-day average); caffeine and **nicotine** totals; **caffeine and nicotine in your system now and at your usual bedtime** (half-life models, defaults 5 h and 2 h, adjustable); last-caffeine time; foods logged; estimate share |
 | Energy | Logged burn; steps; net kcal (intake − logged burn); 7-day averages |
 | Sleep | Duration; onset; wake; midpoint; regularity (bedtime consistency, Sleep Regularity Index once there's enough data); naps |
 | Nature's call | Count; total minutes; average duration; time-of-day pattern (descriptive only, neutral wording) |

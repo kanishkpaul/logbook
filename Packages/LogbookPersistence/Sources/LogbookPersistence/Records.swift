@@ -66,7 +66,10 @@ public struct Food: Hashable, Identifiable, Sendable {
     @Column("serving_unit") public var servingUnit: String?
     public var kcal: Double?
     @Column("protein_g") public var proteinG: Double?
+    @Column("carbs_g") public var carbsG: Double?
+    @Column("fat_g") public var fatG: Double?
     @Column("caffeine_mg") public var caffeineMg: Double?
+    @Column("nicotine_mg") public var nicotineMg: Double?
     @Column("is_favourite") public var isFavourite: Bool = false
     @Column("created_at") public var createdAt: Date
     @Column("updated_at") public var updatedAt: Date
@@ -74,7 +77,28 @@ public struct Food: Hashable, Identifiable, Sendable {
     @Column("import_batch_id") public var importBatchID: ImportBatch.ID?
 
     public var nutrition: Nutrition {
-        Nutrition(kcal: kcal, proteinG: proteinG, caffeineMg: caffeineMg)
+        get {
+            Nutrition(kcal: kcal, proteinG: proteinG, carbsG: carbsG, fatG: fatG, caffeineMg: caffeineMg, nicotineMg: nicotineMg)
+        }
+        set {
+            kcal = newValue.kcal
+            proteinG = newValue.proteinG
+            carbsG = newValue.carbsG
+            fatG = newValue.fatG
+            caffeineMg = newValue.caffeineMg
+            nicotineMg = newValue.nicotineMg
+        }
+    }
+}
+
+extension Food {
+    /// `aliases` decoded from its JSON array (e.g. `["cof", "coffee"]`).
+    public var aliasList: [String] {
+        get { (try? JSONDecoder().decode([String].self, from: Data(aliases.utf8))) ?? [] }
+        set {
+            let clean = newValue.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            aliases = (try? String(data: JSONEncoder().encode(clean), encoding: .utf8)) ?? "[]"
+        }
     }
 }
 
@@ -89,7 +113,10 @@ public struct FoodLogEntry: Hashable, Identifiable, Sendable {
     public var unit: String?
     public var kcal: Double?
     @Column("protein_g") public var proteinG: Double?
+    @Column("carbs_g") public var carbsG: Double?
+    @Column("fat_g") public var fatG: Double?
     @Column("caffeine_mg") public var caffeineMg: Double?
+    @Column("nicotine_mg") public var nicotineMg: Double?
     @Column("consumed_at") public var consumedAt: Date
     @Column("tz_identifier") public var tzIdentifier: String
     @Column("logical_day") public var logicalDay: LogicalDay
@@ -102,7 +129,17 @@ public struct FoodLogEntry: Hashable, Identifiable, Sendable {
     @Column("deleted_at") public var deletedAt: Date?
 
     public var nutrition: Nutrition {
-        Nutrition(kcal: kcal, proteinG: proteinG, caffeineMg: caffeineMg)
+        get {
+            Nutrition(kcal: kcal, proteinG: proteinG, carbsG: carbsG, fatG: fatG, caffeineMg: caffeineMg, nicotineMg: nicotineMg)
+        }
+        set {
+            kcal = newValue.kcal
+            proteinG = newValue.proteinG
+            carbsG = newValue.carbsG
+            fatG = newValue.fatG
+            caffeineMg = newValue.caffeineMg
+            nicotineMg = newValue.nicotineMg
+        }
     }
 
     public var needsValues: Bool { nutrition.isEmpty }
@@ -165,7 +202,10 @@ public struct DailyFacts: Hashable, Sendable {
     @Column("nc_min") public var ncMin: Int?
     public var kcal: Double?
     @Column("protein_g") public var proteinG: Double?
+    @Column("carbs_g") public var carbsG: Double?
+    @Column("fat_g") public var fatG: Double?
     @Column("caffeine_mg") public var caffeineMg: Double?
+    @Column("nicotine_mg") public var nicotineMg: Double?
     @Column("food_entries") public var foodEntries: Int?
     @Column("food_needing_values") public var foodNeedingValues: Int?
     @Column("burn_kcal") public var burnKcal: Double?
@@ -177,7 +217,8 @@ public struct DailyFacts: Hashable, Sendable {
     public static func empty(_ day: LogicalDay) -> DailyFacts {
         DailyFacts(
             logicalDay: day, workMin: nil, workBlocks: nil, sleepMin: nil, ncCount: nil, ncMin: nil,
-            kcal: nil, proteinG: nil, caffeineMg: nil, foodEntries: nil, foodNeedingValues: nil,
+            kcal: nil, proteinG: nil, carbsG: nil, fatG: nil, caffeineMg: nil, nicotineMg: nil,
+            foodEntries: nil, foodNeedingValues: nil,
             burnKcal: nil, steps: nil, netKcal: nil, hasEstimate: false
         )
     }

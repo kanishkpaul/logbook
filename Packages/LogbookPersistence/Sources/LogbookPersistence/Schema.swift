@@ -19,6 +19,7 @@ public enum Schema {
         migrator.registerMigration("v1: daily_facts views", migrate: v1Views)
         migrator.registerMigration("v1: change log triggers", migrate: v1ChangeLog)
         migrator.registerMigration("v2: food import batch", migrate: v2FoodImportBatch)
+        migrator.registerMigration("v3: macros and nicotine", migrate: v3MacrosAndNicotine)
         return migrator
     }
 
@@ -319,6 +320,93 @@ public enum Schema {
             ALTER TABLE "food" ADD COLUMN "import_batch_id" TEXT REFERENCES "import_batch"("id") ON DELETE SET NULL
             """)
         try installChangeLogTriggers(db, table: "food")
+    }
+
+    // MARK: v3
+
+    /// Carbs, fat and nicotine on the dictionary and on every entry, and in
+    /// `daily_facts`. Old rows get NULL (unknown), never zero.
+    static func v3MacrosAndNicotine(_ db: Database) throws {
+        for table in ["food", "food_log_entry"] {
+            for column in ["carbs_g", "fat_g", "nicotine_mg"] {
+                try db.execute(sql: "ALTER TABLE \"\(table)\" ADD COLUMN \"\(column)\" REAL")
+            }
+            try installChangeLogTriggers(db, table: table)
+        }
+        try db.execute(sql: """
+            DROP VIEW "daily_facts";
+
+            CREATE VIEW "daily_facts" AS
+            WITH
+              "days" AS (
+                SELECT "logical_day" FROM "time_block" WHERE "deleted_at" IS NULL AND "end_utc" IS NOT NULL
+                UNION
+                SELECT "logical_day" FROM "food_log_entry" WHERE "deleted_at" IS NULL
+                UNION
+                SELECT "logical_day" FROM "metric_sample" WHERE "deleted_at" IS NULL
+              ),
+              "blocks" AS (
+                SELECT
+                  "logical_day",
+                  SUM(CASE WHEN "kind" = 'work' THEN "minutes" END) AS "work_min",
+                  NULLIF(COUNT(CASE WHEN "kind" = 'work' THEN 1 END), 0) AS "work_blocks",
+                  SUM(CASE WHEN "kind" = 'sleep' THEN "minutes" END) AS "sleep_min",
+                  SUM(CASE WHEN "kind" = 'nature_call' THEN "minutes" END) AS "nc_min",
+                  NULLIF(COUNT(CASE WHEN "kind" = 'nature_call' THEN 1 END), 0) AS "nc_count",
+                  MAX("is_estimate") AS "blocks_estimated"
+                FROM (
+                  SELECT
+                    "logical_day", "kind", "is_estimate",
+                    CAST(round((julianday("end_utc") - julianday("start_utc")) * 1440) AS INTEGER) AS "minutes"
+                  FROM "time_block"
+                  WHERE "deleted_at" IS NULL AND "end_utc" IS NOT NULL
+                )
+                GROUP BY "logical_day"
+              ),
+              "food" AS (
+                SELECT
+                  "logical_day",
+                  SUM("kcal") AS "kcal",
+                  SUM("protein_g") AS "protein_g",
+                  SUM("carbs_g") AS "carbs_g",
+                  SUM("fat_g") AS "fat_g",
+                  SUM("caffeine_mg") AS "caffeine_mg",
+                  SUM("nicotine_mg") AS "nicotine_mg",
+                  COUNT(*) AS "food_entries",
+                  SUM("kcal" IS NULL AND "protein_g" IS NULL AND "carbs_g" IS NULL AND "fat_g" IS NULL
+                      AND "caffeine_mg" IS NULL AND "nicotine_mg" IS NULL) AS "food_needing_values",
+                  MAX("is_estimate") AS "food_estimated"
+                FROM "food_log_entry"
+                WHERE "deleted_at" IS NULL
+                GROUP BY "logical_day"
+              )
+            SELECT
+              d."logical_day" AS "logical_day",
+              b."work_min" AS "work_min",
+              b."work_blocks" AS "work_blocks",
+              b."sleep_min" AS "sleep_min",
+              b."nc_count" AS "nc_count",
+              b."nc_min" AS "nc_min",
+              f."kcal" AS "kcal",
+              f."protein_g" AS "protein_g",
+              f."carbs_g" AS "carbs_g",
+              f."fat_g" AS "fat_g",
+              f."caffeine_mg" AS "caffeine_mg",
+              f."nicotine_mg" AS "nicotine_mg",
+              f."food_entries" AS "food_entries",
+              f."food_needing_values" AS "food_needing_values",
+              burn."value" AS "burn_kcal",
+              steps."value" AS "steps",
+              CASE WHEN f."kcal" IS NOT NULL AND burn."value" IS NOT NULL
+                THEN f."kcal" - burn."value" END AS "net_kcal",
+              (COALESCE(b."blocks_estimated", 0) OR COALESCE(f."food_estimated", 0)
+                OR COALESCE(burn."has_estimate", 0) OR COALESCE(steps."has_estimate", 0)) AS "has_estimate"
+            FROM "days" d
+            LEFT JOIN "blocks" b ON b."logical_day" = d."logical_day"
+            LEFT JOIN "food" f ON f."logical_day" = d."logical_day"
+            LEFT JOIN "daily_metric" burn ON burn."logical_day" = d."logical_day" AND burn."metric_key" = 'active_kcal'
+            LEFT JOIN "daily_metric" steps ON steps."logical_day" = d."logical_day" AND steps."metric_key" = 'steps';
+            """)
     }
 
     // MARK: Change log

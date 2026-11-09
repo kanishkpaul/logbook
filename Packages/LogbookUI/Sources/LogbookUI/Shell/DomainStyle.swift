@@ -3,7 +3,7 @@ import SwiftUI
 
 /// One semantic hue and SF Symbol per domain, used everywhere (master plan §11).
 public enum Domain: String, CaseIterable, Sendable {
-    case work, sleep, food, caffeine, energy, natureCall
+    case work, sleep, food, caffeine, nicotine, energy, natureCall
 
     public var color: Color {
         switch self {
@@ -11,6 +11,7 @@ public enum Domain: String, CaseIterable, Sendable {
         case .sleep: .purple
         case .food: .orange
         case .caffeine: .brown
+        case .nicotine: .gray
         case .energy: .green
         case .natureCall: .teal
         }
@@ -22,6 +23,7 @@ public enum Domain: String, CaseIterable, Sendable {
         case .sleep: "bed.double.fill"
         case .food: "fork.knife"
         case .caffeine: "cup.and.saucer.fill"
+        case .nicotine: "smoke.fill"
         case .energy: "flame.fill"
         case .natureCall: "drop.fill"
         }
@@ -33,6 +35,7 @@ public enum Domain: String, CaseIterable, Sendable {
         case .sleep: "Sleep"
         case .food: "Food"
         case .caffeine: "Caffeine"
+        case .nicotine: "Nicotine"
         case .energy: "Energy"
         case .natureCall: "Nature's call"
         }

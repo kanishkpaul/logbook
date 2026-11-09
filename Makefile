@@ -10,9 +10,9 @@ RELEASE  := $(DD)/Build/Products/Release/Logbook.app
 # the prompt. In Xcode, click "Trust & Enable" once.
 XCB      := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination 'platform=macOS' \
             -derivedDataPath $(DD) -skipMacroValidation
-PACKAGES := LogbookCore LogbookPersistence LogbookImport
+PACKAGES := LogbookCore LogbookPersistence LogbookImport LogbookUI
 
-.PHONY: build release run stop test test-core test-persistence test-import format-check schema install spike-status import-preview import-apply import-batches clean
+.PHONY: build release run stop test test-core test-persistence test-import test-ui render demo format-check schema install spike-status import-preview import-apply import-batches clean
 
 build:
 	$(XCB) -configuration Debug build | grep -E 'error|warning: |BUILD' || true
@@ -26,7 +26,7 @@ run: build stop
 stop:
 	-pkill -x Logbook
 
-test: test-core test-persistence test-import
+test: test-core test-persistence test-import test-ui
 
 test-core:
 	swift test --package-path Packages/LogbookCore
@@ -36,6 +36,17 @@ test-persistence:
 
 test-import:
 	swift test --package-path Packages/LogbookImport
+
+test-ui:
+	swift test --package-path Packages/LogbookUI
+
+# Renders key views on synthetic data to build/shots/*.png for a visual check.
+render:
+	RENDER_DIR=$(CURDIR)/build/shots swift test --package-path Packages/LogbookUI --filter RenderViews
+
+# Runs the app on a scratch data folder instead of the real log: make demo DIR=/tmp/logbook-demo
+demo: build stop
+	open -n --env LOGBOOK_DATA_DIR="$(DIR)" $(APP)
 
 # Regenerates Packages/LogbookPersistence/schema.sql.
 schema:
