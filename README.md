@@ -13,7 +13,7 @@
 
 <br/>
 
-![Status](https://img.shields.io/badge/status-planning-BF5AF2?style=flat-square)
+![Status](https://img.shields.io/badge/status-M0%20spike%20%2B%20M1%20foundation-BF5AF2?style=flat-square)
 ![Platform](https://img.shields.io/badge/macOS-27-1D1D1F?style=flat-square&logo=apple&logoColor=white)
 ![Swift](https://img.shields.io/badge/Swift-6.4-F05138?style=flat-square&logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-5E5CE6?style=flat-square)
@@ -196,8 +196,8 @@ logbook/
 | | Milestone | Outcome |
 |:-:|---|---|
 | ✅ | **Research & plan** | Stack chosen, [master plan](docs/MASTER_PLAN.md) written |
-| ⬜️ | **M0 · Spike** | Signing, live menu bar label and notifications verified on macOS 27 |
-| ⬜️ | **M1 · Foundation** | Schema, day attribution and `daily_facts`, with the date-maths test matrix passing |
+| 🟡 | **M0 · Spike** | Ad-hoc build runs; live DB opens. Permission-survival and menu bar label checks need a manual pass ([checklist](docs/M0_SPIKE.md)) |
+| 🟡 | **M1 · Foundation** | Schema, day attribution and `daily_facts` built; date-maths matrix passing. Default day boundary awaits decision #1 |
 | ⬜️ | **M2 · Import history** | ~11 weeks of Notes logs imported with preview and undo; food library seeded |
 | ⬜️ | **M3 · Daily driver** | Today, Quick Entry, timers, menu bar, Close the day; **Notes retired** |
 | ⬜️ | **M4 · Food** | Library, favourites, meals, caffeine curve, protein tracking |
@@ -222,8 +222,8 @@ logbook/
 
 ## Building
 
-> [!IMPORTANT]
-> Not buildable yet. The project is in the planning phase; commands land with **M0**.
+> [!NOTE]
+> The app is currently the M0 spike window plus the M1 data layer. Opening it in Xcode asks once to "Trust & Enable" the package macros.
 
 Requirements: macOS 27, Xcode 27.2, Apple silicon. No paid Apple Developer account needed for the Mac app.
 
@@ -231,7 +231,8 @@ Requirements: macOS 27, Xcode 27.2, Apple silicon. No paid Apple Developer accou
 make build     # xcodebuild, Debug
 make run       # build and open
 make test      # swift test for every package
-make install   # Release build to /Applications/logbook.app
+make install   # Release build to /Applications/Logbook.app
+make format-check  # project.xcproj is in canonical form
 ```
 
 ## Docs
