@@ -15,6 +15,7 @@ public struct TodayView: View {
             if let state = model.state {
                 VStack(alignment: .leading, spacing: 20) {
                     QuickEntryField(model: model)
+                    QuickAddBar(model: model)
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 12)], spacing: 12) {
                         ForEach(state.heroes) { HeroCard(hero: $0) }

@@ -8,12 +8,33 @@ import SwiftUI
 public struct DictionaryView: View {
     @Bindable var model: DictionaryModel
     @State private var selection: UUID?
+    @State private var showingMeals = false
 
     public init(model: DictionaryModel) {
         self.model = model
     }
 
     public var body: some View {
+        Group {
+            if showingMeals {
+                MealsView(store: model.store)
+            } else {
+                foods
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Show", selection: $showingMeals) {
+                    Text("Foods").tag(false)
+                    Text("Meals").tag(true)
+                }
+                .pickerStyle(.segmented)
+            }
+        }
+        .navigationTitle("Dictionary")
+    }
+
+    private var foods: some View {
         Table(model.visible, selection: $selection) {
             TableColumn("Name") { f in
                 HStack(spacing: 4) {
@@ -49,7 +70,6 @@ public struct DictionaryView: View {
                     .keyboardShortcut("n", modifiers: .command)
             }
         }
-        .navigationTitle("Dictionary")
         .onAppear { model.reload() }
     }
 

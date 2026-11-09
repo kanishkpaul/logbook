@@ -32,7 +32,7 @@ private struct MainWindow: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        RootView(today: delegate.today, dictionary: delegate.dictionary) {
+        RootView(today: delegate.today, dictionary: delegate.dictionary, data: delegate.data) {
             DiagnosticsView(model: delegate.diagnostics)
         }
         .onAppear { delegate.openMainWindow = { openWindow(id: "main") } }
@@ -45,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store: LogStore
     let today: TodayModel
     let dictionary: DictionaryModel
+    let data: DataModel
     let diagnostics: DiagnosticsModel
     var openMainWindow: (() -> Void)?
     var quickEntryShortcut: String { hotKey?.active?.label ?? "none (all candidates taken)" }
@@ -68,6 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.store = store
         today = TodayModel(store: store)
         dictionary = DictionaryModel(store: store)
+        data = DataModel(store: store)
         diagnostics = DiagnosticsModel(databaseCheck: { "ok (\(try AppDatabase.tableCount(store.database)) tables)" })
 
         super.init()
@@ -84,6 +86,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.checkForgottenTimers() }
+        }
+        // Daily snapshot now, then check hourly (a new day may start while running).
+        data.ensureDaily()
+        Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3600))
+                self?.data.ensureDaily()
+            }
         }
         Task { [weak self] in
             // Let the first snapshot arrive and the status item install.

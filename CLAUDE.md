@@ -5,10 +5,11 @@ Private, single-user native macOS logbook (work blocks, food with kcal/protein/c
 **Read first:** `docs/MASTER_PLAN.md` (what we're building and in what order) and `docs/research/stack-and-architecture-report.md` (why).
 
 ## Status
-M3 daily driver built: Today (heroes vs 28-day baselines, 24-hour track, caffeine/nicotine in system, day log), Quick Entry (⌥Space panel, ⌘L, in Today and the menu bar), real timers in the menu bar (`NSStatusItem`), forgotten-timer guard, Close the day, Dictionary (full macros + nicotine), Import (paste). M0 permission-survival checks still need the user's clicks. Decisions: calendar day (`DayBoundary.standard`); NC stores only the total; every `>` block is work; no targets (baselines only). Next: M4 food polish / M5 charts. Other open decisions are in master plan §16. Don't build past them without asking.
+M3 daily driver and M4 food built, plus backups/export pulled forward from M8: daily `VACUUM INTO` snapshots (keep 30) in `<data>/Backups`, JSON export that restores exactly (round-trip tested), CSV export, Backups & Export screen, CLI `backup`/`export-json`/`export-csv`/`restore`. M4: meals (`meal x = a + b`), copy yesterday, favourites/recents quick-add, 7-day macro averages, caffeine/nicotine at usual bedtime (median sleep onset). M0 permission-survival checks still need the user's clicks. Decisions: calendar day (`DayBoundary.standard`); NC stores only the total; every `>` block is work; no targets (baselines only). Next: M5 charts & trends. Other open decisions are in master plan §16. Don't build past them without asking.
 
 ## Commands
 - `make test` — `swift test` for Core, Persistence, Import and UI (fast; use this most).
+- New tables must be added to `DataExport.restoreOrder` (parents before children) so JSON restore satisfies foreign keys.
 - `make render` — renders key views on synthetic data to `build/shots/*.png` (ImageRenderer can't draw AppKit text fields/forms; those show as blanks).
 - `make demo DIR=/tmp/logbook-demo` — runs the app on a scratch data folder (`LOGBOOK_DATA_DIR`), never the real log. Seed it with `logbook-import apply … --db $DIR/logbook.sqlite`.
 - `make build` / `make run` — xcodebuild Debug into `build/DD`, then open.

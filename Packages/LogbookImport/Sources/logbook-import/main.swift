@@ -12,6 +12,10 @@ let usage = """
       logbook-import apply   <file> [--year YYYY] [--tz ZONE] [--db PATH]
       logbook-import undo    <batch-id> [--db PATH]
       logbook-import batches [--db PATH]
+      logbook-import backup [--db PATH]                 (snapshot into <data folder>/Backups)
+      logbook-import export-json <file.json> [--db PATH]
+      logbook-import export-csv  <folder> [--db PATH]
+      logbook-import restore <file.json> --db NEW.sqlite  (into a new, empty database only)
 
     --db defaults to the live database (~/Library/Application Support/logbook/logbook.sqlite).
     """
@@ -111,9 +115,34 @@ do {
         for b in list {
             print("\(b.id.uuidString.lowercased())  \(f.string(from: b.importedAt))  \(b.sourceName)  \(b.lineCount) lines\(b.undoneAt == nil ? "" : "  (undone)")")
         }
+    case "backup":
+        let importer = try openImporter(o)
+        let backups = Backups(database: importer.store.database,
+                              directory: (o.db?.deletingLastPathComponent() ?? AppDatabase.defaultDirectory).appending(path: "Backups"))
+        let url = try backups.backUp(day: importer.store.boundary.logicalDay(containing: Date(), in: o.timeZone))
+        print("backed up to \(url.path)")
+    case "export-json":
+        guard let path = o.argument else { fail(usage) }
+        let importer = try openImporter(o)
+        let url = URL(filePath: (path as NSString).expandingTildeInPath)
+        try DataExport.json(importer.store.database, exportedAt: Date()).write(to: url)
+        print("exported \(url.path)")
+    case "export-csv":
+        guard let path = o.argument else { fail(usage) }
+        let importer = try openImporter(o)
+        let files = try DataExport.csv(importer.store.database, to: URL(filePath: (path as NSString).expandingTildeInPath))
+        print("exported \(files.count) CSV files to \(path)")
+    case "restore":
+        guard let path = o.argument, let db = o.db else { fail("restore needs <file.json> and --db for a NEW database\n\n\(usage)") }
+        guard !FileManager.default.fileExists(atPath: db.path) else { fail("\(db.path) already exists; restore only writes a new database") }
+        let data = try Data(contentsOf: URL(filePath: (path as NSString).expandingTildeInPath))
+        let pool = try AppDatabase.openLive(directory: db.deletingLastPathComponent(), fileName: db.lastPathComponent)
+        try DataExport.restore(data, into: pool)
+        print("restored into \(db.path)")
     default:
         fail("unknown command \(o.command)\n\n\(usage)")
     }
 } catch {
-    fail("error: \((error as? Importer.Failure)?.description ?? error.localizedDescription)")
+    let text = (error as? Importer.Failure)?.description ?? (error as? DataExport.RestoreError).map { "\($0)" } ?? "\(error)"
+    fail("error: \(text)")
 }

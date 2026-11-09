@@ -179,6 +179,32 @@ public struct MetricSample: Hashable, Identifiable, Sendable {
     @Column("deleted_at") public var deletedAt: Date?
 }
 
+/// A named group of dictionary items, logged together.
+@Table("meal")
+public struct Meal: Hashable, Identifiable, Sendable {
+    public let id: UUID
+    public var name: String
+    public var aliases: String = "[]"
+    @Column("created_at") public var createdAt: Date
+    @Column("updated_at") public var updatedAt: Date
+    @Column("archived_at") public var archivedAt: Date?
+
+    public var aliasList: [String] {
+        (try? JSONDecoder().decode([String].self, from: Data(aliases.utf8))) ?? []
+    }
+}
+
+@Table("meal_item")
+public struct MealItem: Hashable, Identifiable, Sendable {
+    public let id: UUID
+    @Column("meal_id") public var mealID: Meal.ID
+    @Column("food_id") public var foodID: Food.ID
+    public var servings: Double = 1
+    public var quantity: Double?
+    public var unit: String?
+    public var sort: Int = 0
+}
+
 @Table("change_log")
 public struct ChangeLogEntry: Hashable, Identifiable, Sendable {
     public let id: UUID

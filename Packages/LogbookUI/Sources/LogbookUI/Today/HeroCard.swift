@@ -25,6 +25,8 @@ struct HeroCard: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .help([hero.headline, hero.detail].compactMap { $0 }.joined(separator: "\n"))
             Chart(hero.spark) { point in
                 if let v = point.value {
                     BarMark(x: .value("Day", point.day.description), y: .value(hero.title, v))

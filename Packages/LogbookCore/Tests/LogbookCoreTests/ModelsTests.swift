@@ -91,8 +91,31 @@ import Testing
     @Test func compactIsDenseAndHidesZeroStimulants() {
         let n = Nutrition(kcal: 489.6, proteinG: 9.6, carbsG: 74.4, fatG: 14.4, caffeineMg: 0, nicotineMg: 0)
         #expect(NutritionFormat.compact(n) == "490 kcal · P 9.6 · C 74 · F 14")
-        #expect(NutritionFormat.compact(Nutrition(kcal: 0, nicotineMg: 1.2)) == "0 kcal · 1.2 mg nicotine")
+        #expect(NutritionFormat.compact(Nutrition(kcal: 0, proteinG: 0, carbsG: 0, fatG: 0, caffeineMg: 0, nicotineMg: 1.2)) == "1.2 mg nicotine")
         #expect(NutritionFormat.compact(Nutrition(caffeineMg: 0)) == "0 kcal")
         #expect(NutritionFormat.compact(Nutrition()) == "needs values")
+    }
+}
+
+@Suite struct SleepTimingTests {
+    let tz = TimeZone(identifier: "Asia/Kolkata")!
+
+    func at(_ d: Int, _ h: Int, _ m: Int) -> Date {
+        Calendar.gregorian(in: tz).date(from: DateComponents(year: 2026, month: 11, day: d, hour: h, minute: m))!
+    }
+
+    @Test func medianWrapsAroundMidnight() {
+        // 23:30, 00:15, 00:45, 01:15, 02:00 → median 00:45
+        let starts = [at(1, 23, 30), at(2, 0, 15), at(3, 0, 45), at(4, 1, 15), at(5, 2, 0)]
+        #expect(SleepTiming.usualOnset(starts, in: tz) == 45)
+        let early = [at(1, 22, 0), at(2, 22, 30), at(3, 23, 0), at(4, 23, 30), at(5, 23, 0)]
+        #expect(SleepTiming.usualOnset(early, in: tz) == -60)
+        #expect(SleepTiming.usualOnset(Array(starts.prefix(4)), in: tz) == nil, "needs 5 nights")
+    }
+
+    @Test func bedtimeIsTheComingNight() {
+        let day = LogicalDay("2026-11-09")!
+        #expect(SleepTiming.bedtime(endingDay: day, onset: 45, in: tz) == at(10, 0, 45))
+        #expect(SleepTiming.bedtime(endingDay: day, onset: -60, in: tz) == at(9, 23, 0))
     }
 }

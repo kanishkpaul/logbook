@@ -61,6 +61,19 @@ After the last ` - ` on a food line (or after `$`):
 - A `~` anywhere marks the values as an estimate.
 - Fields the line doesn't give are filled from the dictionary entry (scaled), so macros are counted even when you only type `kcal / protein / caffeine`.
 
+## Quick Entry extras (in the app, not in imported files)
+
+| Type | Does |
+|---|---|
+| `start study` · `start sleep` · `start nc` | starts a timer (`start` alone = work) |
+| `stop` · `stop sleep` | stops a timer |
+| `copy yesterday` | logs yesterday's food again at the same times, same values |
+| `meal breakfast = coffee + 2 eggs + toast 2 slices` | saves a meal (every item must be in the dictionary); redefining replaces it |
+| `breakfast` · `breakfast x2` | logs every item of the meal |
+| `2 eggs` · `egg x2` | counts; `eggs` and `egg` match the same dictionary entry |
+
+Typing a food with values and a count (`egg x2 - 140 / 12 / 0`) stores **one** egg (70 kcal) in the dictionary.
+
 ## Rules
 
 - **Day boundary:** calendar day (decision #1).

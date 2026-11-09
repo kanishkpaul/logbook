@@ -33,6 +33,7 @@ struct FoodResolver {
 
     mutating func resolve(_ f: ParsedFood, store: LogStore, importBatchID: UUID?, newFoodID: UUID) -> Resolution {
         let known = library.match(f.matchKey) ?? pending[f.matchKey]
+            ?? (f.matchKey.hasSuffix("s") ? pending[String(f.matchKey.dropLast())] : nil)
         let servings = known.map { Self.servings(quantity: f.quantity, unit: f.unit, of: $0) } ?? 1
 
         if let typed = f.nutrition {
@@ -42,7 +43,10 @@ struct FoodResolver {
             }
             var newFood: Food?
             if !f.isEstimate {
-                let food = store.foodRow(name: f.baseName, nutrition: typed, servingSize: f.quantity,
+                // `egg x2 - 140 / 12 / 0` is two eggs: the dictionary stores one.
+                let count = f.unit == "x" ? (f.quantity ?? 1) : 1
+                let food = store.foodRow(name: f.baseName, nutrition: count > 0 ? typed.scaled(by: 1 / count) : typed,
+                                         servingSize: f.unit == "x" ? nil : f.quantity,
                                          servingUnit: f.unit == "x" ? nil : f.unit,
                                          importBatchID: importBatchID, id: newFoodID)
                 pending[f.matchKey] = food
@@ -80,5 +84,11 @@ struct LibraryIndex {
         }
     }
 
-    func match(_ key: String) -> Food? { byKey[key] }
+    /// Exact name or alias, else singular/plural (`eggs` ↔ `egg`).
+    func match(_ key: String) -> Food? {
+        if let f = byKey[key] ?? byKey[key + "s"] { return f }
+        if key.hasSuffix("es"), let f = byKey[String(key.dropLast(2))] { return f }
+        if key.hasSuffix("s"), let f = byKey[String(key.dropLast())] { return f }
+        return nil
+    }
 }

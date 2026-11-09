@@ -38,6 +38,8 @@ public struct QuickEntry: Sendable {
         case insert(blocks: [TimeBlock], foods: [FoodLogEntry], samples: [MetricSample], newFoods: [Food])
         case start(BlockKind, String)
         case stop(TimeBlock)
+        case copy(from: LogicalDay, to: LogicalDay)
+        case saveMeal(name: String, parts: [MealPart])
     }
 
     // MARK: Interpret
@@ -86,6 +88,22 @@ public struct QuickEntry: Sendable {
             return out
         }
 
+        if lower == "copy yesterday" {
+            let n = try store.foodCount(on: today.previous)
+            guard n > 0 else {
+                out.problem = "Nothing was logged yesterday"
+                return out
+            }
+            out.lines = [PreviewLine(kind: "food", title: "Copy yesterday's food", detail: "\(n) item\(n == 1 ? "" : "s") · same times today")]
+            out.action = .copy(from: today.previous, to: today)
+            return out
+        }
+
+        if lower.hasPrefix("meal "), let eq = text.firstIndex(of: "=") {
+            try defineMeal(text, eq: eq, into: &out)
+            return out
+        }
+
         let parser = ShorthandParser(defaultYear: today.year)
         switch parser.parseLine(text, on: today) {
         case .issue(_, let message):
@@ -111,13 +129,23 @@ public struct QuickEntry: Sendable {
             out.action = .insert(blocks: [block], foods: [], samples: [], newFoods: [])
 
         case .food(let f):
+            let at = f.timeMinutes.map { WallTime(day: today, minutes: $0).date(in: tz) } ?? now
+            if f.nutrition == nil, let meal = try store.meals().first(where: { Self.matches($0, f.matchKey) }) {
+                let times = f.unit == "x" ? (f.quantity ?? 1) : 1
+                let rows = store.mealEntryRows(meal, times: times, consumedAt: at)
+                let total = rows.reduce(Nutrition()) { $0 + $1.nutrition }
+                out.lines = [PreviewLine(kind: "food", title: "Meal · \(meal.meal.name)\(times == 1 ? "" : " x\(NutritionFormat.number(times))")",
+                                         detail: NutritionFormat.compact(total))]
+                    + rows.map { PreviewLine(kind: "dictionary", title: $0.name, detail: NutritionFormat.compact($0.nutrition)) }
+                out.action = .insert(blocks: [], foods: rows, samples: [], newFoods: [])
+                return
+            }
             var resolver = try store.database.read { db in
                 FoodResolver(library: try LibraryIndex(db: db), dictionaryValuesAreEstimates: false)
             }
             let r = resolver.resolve(f, store: store, importBatchID: nil, newFoodID: store.uuid())
-            let consumedAt = f.timeMinutes.map { WallTime(day: today, minutes: $0).date(in: tz) } ?? now
             let entry = store.foodEntryRow(name: f.name, food: r.food, servings: r.servings, quantity: f.quantity, unit: f.unit,
-                                           nutrition: r.nutrition, consumedAt: consumedAt, timeZone: tz,
+                                           nutrition: r.nutrition, consumedAt: at, timeZone: tz,
                                            isEstimate: r.isEstimate, source: .manual, rawText: line)
             var lines = [PreviewLine(kind: "food", title: f.name, detail: NutritionFormat.compact(entry.nutrition))]
             if let food = r.newFood {
@@ -157,6 +185,35 @@ public struct QuickEntry: Sendable {
         }
     }
 
+    /// `meal breakfast = coffee + egg x2 + toast`: every part must be in the dictionary.
+    private func defineMeal(_ text: String, eq: String.Index, into out: inout Interpretation) throws {
+        let name = text[text.index(text.startIndex, offsetBy: 5)..<eq].trimmingCharacters(in: .whitespaces)
+        let rhs = text[text.index(after: eq)...]
+        guard !name.isEmpty else { out.problem = "Name the meal: meal breakfast = coffee + toast"; return }
+        let library = try store.database.read { try LibraryIndex(db: $0) }
+        var parts: [MealPart] = []
+        for raw in rhs.split(separator: "+") {
+            let f = ShorthandParser.food(raw.trimmingCharacters(in: .whitespaces))
+            guard !f.name.isEmpty else { continue }
+            guard let food = library.match(f.matchKey) else {
+                out.problem = "“\(f.baseName)” isn't in the dictionary yet; log it once with values first"
+                return
+            }
+            parts.append(MealPart(food: food, servings: FoodResolver.servings(quantity: f.quantity, unit: f.unit, of: food),
+                                  quantity: f.quantity, unit: f.unit))
+        }
+        guard !parts.isEmpty else { out.problem = "List the items: meal \(name) = coffee + toast"; return }
+        let exists = try store.meals().contains { $0.meal.name.lowercased() == name.lowercased() }
+        let total = parts.reduce(Nutrition()) { $0 + $1.food.nutrition.scaled(by: $1.servings) }
+        out.lines = [PreviewLine(kind: "dictionary", title: "\(exists ? "Replace" : "Save") meal “\(name)”", detail: NutritionFormat.compact(total))]
+            + parts.map { PreviewLine(kind: "food", title: $0.food.name, detail: $0.servings == 1 ? "1 serving" : "\(NutritionFormat.number($0.servings)) servings") }
+        out.action = .saveMeal(name: name, parts: parts)
+    }
+
+    static func matches(_ meal: MealDetail, _ key: String) -> Bool {
+        ([meal.meal.name] + meal.meal.aliasList).contains { ParsedFood.matchKey($0) == key }
+    }
+
     // MARK: Commit
 
     /// Saves what `interpret` previewed. Returns a short confirmation.
@@ -180,6 +237,12 @@ public struct QuickEntry: Sendable {
         case .stop(let block):
             try store.stopBlock(id: block.id)
             return "Stopped \(Self.name(block.kind))"
+        case .copy(let from, let to):
+            let n = try store.copyFood(from: from, to: to).count
+            return "Copied \(n) item\(n == 1 ? "" : "s") from yesterday"
+        case .saveMeal(let name, let parts):
+            try store.saveMeal(name: name, parts: parts)
+            return "Saved meal \(name)"
         }
     }
 

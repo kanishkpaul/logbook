@@ -13,7 +13,7 @@
 
 <br/>
 
-![Status](https://img.shields.io/badge/status-M3%20daily%20driver-BF5AF2?style=flat-square)
+![Status](https://img.shields.io/badge/status-M4%20food-BF5AF2?style=flat-square)
 ![Platform](https://img.shields.io/badge/macOS-27-1D1D1F?style=flat-square&logo=apple&logoColor=white)
 ![Swift](https://img.shields.io/badge/Swift-6.4-F05138?style=flat-square&logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-5E5CE6?style=flat-square)

@@ -22,6 +22,8 @@ public struct DaySnapshot: Sendable, Equatable {
     public var doses: [FoodLogEntry]
     /// `daily_facts` for the 28 days before `day`, then `day` itself (gaps filled).
     public var history: [DailyFacts]
+    /// Starts of finished sleep blocks in the 28 days up to the window's end.
+    public var sleepStarts: [Date] = []
 
     public var today: DailyFacts { history.last ?? .empty(day) }
     /// The 28 days before today (for baselines).
@@ -99,7 +101,14 @@ extension LogStore {
         let rows = try DailyFacts.where { $0.logicalDay >= first && $0.logicalDay <= day }.fetchAll(db)
         let byDay = Dictionary(rows.map { ($0.logicalDay, $0) }, uniquingKeysWith: { a, _ in a })
         let history = LogicalDay.range(first, through: day).map { byDay[$0] ?? .empty($0) }
+        let sleepSince = start.addingTimeInterval(-Double(historyDays) * 86_400)
+        let sleepStarts = try TimeBlock
+            .where { $0.deletedAt.is(nil) && $0.kind.eq(BlockKind.sleep) && $0.startUTC >= sleepSince && $0.startUTC < end }
+            .where { #sql("\($0.endUTC) IS NOT NULL", as: Bool.self) }
+            .order(by: \.startUTC)
+            .fetchAll(db)
+            .map(\.startUTC)
         return DaySnapshot(day: day, window: window, blocks: blocks, running: running, foods: foods,
-                           samples: samples, doses: doses, history: history)
+                           samples: samples, doses: doses, history: history, sleepStarts: sleepStarts)
     }
 }

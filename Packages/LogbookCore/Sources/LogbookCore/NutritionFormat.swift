@@ -12,10 +12,10 @@ public enum NutritionFormat {
     public static func parts(_ n: Nutrition) -> [Part] {
         var out: [Part] = []
         if let v = n.kcal { out.append(Part(label: "kcal", value: whole(v), unit: "kcal")) }
-        if let v = n.proteinG { out.append(Part(label: "protein", value: number(v), unit: "g")) }
-        if let v = n.carbsG { out.append(Part(label: "carbs", value: number(v), unit: "g")) }
-        if let v = n.fatG { out.append(Part(label: "fat", value: number(v), unit: "g")) }
-        if let v = n.caffeineMg { out.append(Part(label: "caffeine", value: number(v), unit: "mg")) }
+        if let v = n.proteinG { out.append(Part(label: "protein", value: grams(v), unit: "g")) }
+        if let v = n.carbsG { out.append(Part(label: "carbs", value: grams(v), unit: "g")) }
+        if let v = n.fatG { out.append(Part(label: "fat", value: grams(v), unit: "g")) }
+        if let v = n.caffeineMg { out.append(Part(label: "caffeine", value: whole(v), unit: "mg")) }
         if let v = n.nicotineMg { out.append(Part(label: "nicotine", value: number(v), unit: "mg")) }
         return out
     }
@@ -33,6 +33,14 @@ public enum NutritionFormat {
     public static func compact(_ n: Nutrition) -> String {
         guard !n.isEmpty else { return "needs values" }
         var out: [String] = []
+        // A cigarette or pouch: no energy or macros, just the stimulant.
+        let noFood = [n.kcal, n.proteinG, n.carbsG, n.fatG].allSatisfy { ($0 ?? 0) == 0 }
+        let stimulant = (n.caffeineMg ?? 0) > 0 || (n.nicotineMg ?? 0) > 0
+        if noFood && stimulant {
+            if let v = n.caffeineMg, v > 0 { out.append("\(whole(v)) mg caffeine") }
+            if let v = n.nicotineMg, v > 0 { out.append("\(number(v)) mg nicotine") }
+            return out.joined(separator: " · ")
+        }
         if let v = n.kcal { out.append("\(whole(v)) kcal") }
         if let v = n.proteinG { out.append("P \(grams(v))") }
         if let v = n.carbsG { out.append("C \(grams(v))") }

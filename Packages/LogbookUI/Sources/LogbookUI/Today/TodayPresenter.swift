@@ -41,6 +41,15 @@ public struct TodayPresenter {
         let nicotineDoses = s.doses.compactMap { e in e.nicotineMg.flatMap { $0 > 0 ? Dose(at: e.consumedAt, mg: $0) : nil } }
         let caffeineNow = caffeine.remaining(caffeineDoses, at: now)
         let nicotineNow = nicotine.remaining(nicotineDoses, at: now)
+        // At your usual bedtime (median sleep onset of the last 28 nights).
+        let onset = SleepTiming.usualOnset(s.sleepStarts, in: timeZone)
+        let bedtime = onset.map { SleepTiming.bedtime(endingDay: s.day, onset: $0, in: timeZone) }
+        func atBedtime(_ model: HalfLifeModel, _ doses: [Dose], _ fmt: (Double) -> String) -> String? {
+            guard let bedtime, !doses.isEmpty else { return nil }
+            return "≈ \(fmt(model.remaining(doses, at: bedtime))) mg at bedtime (\(timeFmt.string(from: bedtime)))"
+        }
+        let todaysCaffeine = caffeineDoses.filter { s.window.contains($0.at) }
+        let lastCaffeine = todaysCaffeine.map(\.at).max()
 
         func spark(_ value: (DailyFacts) -> Double?) -> [TodayState.SparkPoint] {
             s.history.suffix(14).map { TodayState.SparkPoint(day: $0.logicalDay, value: value($0)) }
@@ -81,12 +90,13 @@ public struct TodayPresenter {
         ))
         heroes.append(.init(
             id: "caffeine", domain: .caffeine, title: "Caffeine now", value: whole(caffeineNow), unit: "mg",
-            headline: nil, detail: today.caffeineMg.map { "\(number($0)) mg today · estimate" } ?? "estimate",
+            headline: atBedtime(caffeine, caffeineDoses, whole),
+            detail: today.caffeineMg.map { "\(whole($0)) mg today" + (lastCaffeine.map { " · last \(timeFmt.string(from: $0))" } ?? "") + " · estimate" } ?? "estimate",
             spark: spark(\.caffeineMg)
         ))
         heroes.append(.init(
             id: "nicotine", domain: .nicotine, title: "Nicotine now", value: number(nicotineNow), unit: "mg",
-            headline: nil, detail: today.nicotineMg.map { "\(number($0)) mg today · estimate" } ?? "estimate",
+            headline: atBedtime(nicotine, nicotineDoses, number), detail: today.nicotineMg.map { "\(number($0)) mg today · estimate" } ?? "estimate",
             spark: spark(\.nicotineMg)
         ))
         heroes.append(.init(
@@ -136,6 +146,17 @@ public struct TodayPresenter {
         let sampleRows = s.samples.map { d in
             TodayState.SampleRow(id: d.id, title: d.name, value: "\(NutritionFormat.number(d.sample.value)) \(d.unit)".trimmingCharacters(in: .whitespaces))
         }
+        // 7-day averages over logged days only (not-logged days are skipped, never zero).
+        let week = previous.suffix(7).filter { $0.kcal != nil || $0.proteinG != nil }
+        var weekAverage: String?
+        if week.count >= 3 {
+            func avg(_ k: KeyPath<DailyFacts, Double?>) -> Double? {
+                let v = week.compactMap { $0[keyPath: k] }
+                return v.isEmpty ? nil : v.reduce(0, +) / Double(v.count)
+            }
+            let n = Nutrition(kcal: avg(\.kcal), proteinG: avg(\.proteinG), carbsG: avg(\.carbsG), fatG: avg(\.fatG))
+            weekAverage = "7-day average · \(NutritionFormat.compact(n)) (\(week.count) days)"
+        }
         let totals = NutritionFormat.parts(Nutrition(kcal: today.kcal, proteinG: today.proteinG, carbsG: today.carbsG,
                                                      fatG: today.fatG, caffeineMg: today.caffeineMg, nicotineMg: today.nicotineMg))
 
@@ -164,7 +185,8 @@ public struct TodayPresenter {
         return TodayState(
             day: s.day, title: Self.formatter("EEEE, d MMMM", timeZone).string(from: s.window.start.addingTimeInterval(12 * 3600)),
             window: s.window, now: now, heroes: heroes, track: track, foodMarks: marks, substances: substances,
-            running: running, blocks: blockRows, foods: foodRows, samples: sampleRows, foodTotals: totals, closeDay: close
+            running: running, blocks: blockRows, foods: foodRows, samples: sampleRows, foodTotals: totals,
+            weekAverage: weekAverage, closeDay: close
         )
     }
 

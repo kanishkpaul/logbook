@@ -34,6 +34,12 @@ struct RenderViewsTests {
             SubstanceChart(state: state)
             DayLogList(model: model, state: state)
         }.padding(), "today-lower", width: 860)
+        try render(VStack(alignment: .leading) {
+            QuickAddBar(model: model)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 12)], spacing: 12) {
+                ForEach(state.heroes) { HeroCard(hero: $0) }
+            }
+        }.padding(), "today-top", width: 860)
         try render(CloseDayView(model: model), "close-day", width: 520)
         try render(MenuBarPanel(model: model, openMain: {}, quit: {}), "menu-bar-panel", width: 460)
         try render(QuickEntryField(model: model, text: "paneer 200g - 530 / 36 / 0 / 0 / 2.4c / 40f").padding(), "quick-entry-new-food", width: 620)

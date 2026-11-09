@@ -17,6 +17,7 @@ public struct MenuBarPanel: View {
             TimersBar(model: model)
             Divider()
             QuickEntryField(model: model)
+            QuickAddBar(model: model)
             if let error = model.lastError {
                 Text(error).font(.caption).foregroundStyle(.orange)
             }

@@ -275,6 +275,11 @@ public struct ShorthandParser: Sendable {
             base = String(m.1)
             quantity = Double(m.2)
             unit = "x"
+        } else if let m = name.wholeMatch(of: /(\d{1,2}(?:\.\d+)?)\s+([A-Za-z].*)/) {
+            // `2 eggs`, `1.5 roti`: a leading count.
+            base = String(m.2)
+            quantity = Double(m.1)
+            unit = "x"
         }
         return ParsedFood(name: name, baseName: base, quantity: quantity, unit: unit,
                           nutrition: nutrition, timeMinutes: timeMinutes, isEstimate: estimate)

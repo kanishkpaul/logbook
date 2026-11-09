@@ -17,6 +17,8 @@ public struct TodayState: Equatable {
     public var foods: [FoodRow]
     public var samples: [SampleRow]
     public var foodTotals: [NutritionFormat.Part]
+    /// "7-day average · 1850 kcal · P 92 · C 210 · F 61 (6 days)", once there are 3 logged days.
+    public var weekAverage: String?
     public var closeDay: CloseDayState
 
     public struct Hero: Equatable, Identifiable {

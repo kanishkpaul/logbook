@@ -18,6 +18,10 @@ public final class TodayModel {
     public var lastError: String?
     /// Short confirmation after a Quick Entry save ("Logged pulao 250g").
     public private(set) var lastConfirmation: String?
+    /// One-click foods: favourites, then frequent recents.
+    public private(set) var quickAdd: [String] = []
+    /// Food entries logged yesterday (for "Copy yesterday").
+    public private(set) var yesterdayFoodCount = 0
 
     public var caffeineHalfLifeHours: Double {
         didSet { UserDefaults.standard.set(caffeineHalfLifeHours, forKey: "caffeineHalfLifeHours"); represent() }
@@ -91,6 +95,8 @@ public final class TodayModel {
             nicotine: HalfLifeModel(halfLife: max(0.25, nicotineHalfLifeHours) * 3600)
         )
         state = presenter.present(snapshot, now: store.now())
+        quickAdd = (try? store.quickAddNames()) ?? []
+        yesterdayFoodCount = (try? store.foodCount(on: snapshot.day.previous)) ?? 0
     }
 
     // MARK: Actions

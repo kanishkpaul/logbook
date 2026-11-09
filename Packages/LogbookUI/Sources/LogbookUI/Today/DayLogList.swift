@@ -48,6 +48,9 @@ struct DayLogList: View {
                             }
                         }
                     }
+                    if let week = state.weekAverage {
+                        Text(week).font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                 }
             } isEmpty: { state.foods.isEmpty }
 

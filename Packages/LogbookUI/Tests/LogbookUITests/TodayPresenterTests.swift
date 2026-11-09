@@ -101,4 +101,41 @@ import Testing
         #expect(c.foodsNeedingValues.map(\.name) == ["Chicken roll"])
         #expect(!c.isComplete)
     }
+
+    @Test func weeklyAverageSkipsUnloggedDays() throws {
+        let now = at(9, 18)
+        let store = try store(now: now)
+        // Logged on 3 of the last 7 days: 1000, 2000, 3000 kcal.
+        for (offset, kcal) in [(1, 1000.0), (3, 2000.0), (6, 3000.0)] {
+            try store.logFood(name: "x", nutrition: Nutrition(kcal: kcal, proteinG: kcal / 20, carbsG: 100, fatG: 50),
+                              consumedAt: cal.date(byAdding: .day, value: -offset, to: at(9, 13))!)
+        }
+        let s = try present(store, now: now)
+        #expect(s.weekAverage == "7-day average · 2000 kcal · P 100 · C 100 · F 50 (3 days)")
+    }
+
+    @Test func caffeineAndNicotineAtUsualBedtime() throws {
+        let now = at(9, 18)
+        let store = try store(now: now)
+        // Five nights falling asleep at 00:30 → usual bedtime 00:30 tonight.
+        for d in 1...5 {
+            let start = cal.date(byAdding: .day, value: -d + 1, to: at(9, 0, 30))!
+            try store.addBlock(kind: .sleep, start: start, end: start.addingTimeInterval(7 * 3600))
+        }
+        try store.logFood(name: "coffee", nutrition: Nutrition(kcal: 40, caffeineMg: 200), consumedAt: at(9, 14, 30))
+        try store.logFood(name: "cig", nutrition: Nutrition(kcal: 0, nicotineMg: 2), consumedAt: at(9, 16, 30))
+        let s = try present(store, now: now)
+        // 14:30 → 00:30 is 10 h = two caffeine half-lives → 50 mg.
+        #expect(hero(s, "caffeine").headline == "≈ 50 mg at bedtime (00:30)")
+        #expect(hero(s, "caffeine").detail == "200 mg today · last 14:30 · estimate")
+        // 16:30 → 00:30 is 8 h = four nicotine half-lives → 0.125 mg.
+        #expect(hero(s, "nicotine").headline == "≈ 0.1 mg at bedtime (00:30)")
+    }
+
+    @Test func noBedtimeEstimateWithoutEnoughNights() throws {
+        let now = at(9, 18)
+        let store = try store(now: now)
+        try store.logFood(name: "coffee", nutrition: Nutrition(kcal: 40, caffeineMg: 200), consumedAt: at(9, 14, 30))
+        #expect(hero(try present(store, now: now), "caffeine").headline == nil)
+    }
 }

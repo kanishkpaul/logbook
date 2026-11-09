@@ -89,6 +89,25 @@ CREATE TABLE "insight_memory" (
   "feedback" TEXT
 ) STRICT;
 
+CREATE TABLE "meal" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "name" TEXT NOT NULL,
+  "aliases" TEXT NOT NULL DEFAULT '[]',
+  "created_at" TEXT NOT NULL,
+  "updated_at" TEXT NOT NULL,
+  "archived_at" TEXT
+) STRICT;
+
+CREATE TABLE "meal_item" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "meal_id" TEXT NOT NULL REFERENCES "meal"("id") ON DELETE CASCADE,
+  "food_id" TEXT NOT NULL REFERENCES "food"("id") ON DELETE CASCADE,
+  "servings" REAL NOT NULL DEFAULT 1,
+  "quantity" REAL,
+  "unit" TEXT,
+  "sort" INTEGER NOT NULL DEFAULT 0
+) STRICT;
+
 CREATE TABLE "metric_definition" (
   "id" TEXT PRIMARY KEY NOT NULL,
   "key" TEXT NOT NULL,
@@ -141,6 +160,8 @@ CREATE TABLE "time_block" (
 CREATE INDEX "change_log_row" ON "change_log"("table_name", "row_id");
 
 CREATE INDEX "food_log_entry_logical_day" ON "food_log_entry"("logical_day");
+
+CREATE INDEX "meal_item_meal" ON "meal_item"("meal_id");
 
 CREATE INDEX "metric_sample_day" ON "metric_sample"("metric_id", "logical_day");
 

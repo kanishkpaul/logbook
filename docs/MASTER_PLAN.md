@@ -305,7 +305,7 @@ Rules: no view does maths; all time comes from an injected clock/calendar; no co
 ## 14. Data safety, signing, platform limits
 
 - **Storage:** `~/Library/Application Support/logbook/logbook.sqlite`.
-- **Backups:** automatic daily snapshot (keep 30), optional mirror of snapshots to iCloud Drive (never the live database), manual JSON/CSV export, and a JSON re-import that proves the round trip.
+- **Backups (built, 9 Nov 2026):** automatic daily snapshot (keep 30), manual JSON/CSV export, and a JSON restore that proves the round trip. Still to do: optional mirror of snapshots to iCloud Drive (never the live database).
 - **Signing:** ad-hoc is enough for the whole Mac app: charts, menu bar, notifications, on-device AI, launch at login. Reading Apple Calendar through EventKit needs only a permission prompt, not a paid account (to confirm in M0).
 - **Needs the $99/yr Apple Developer account** (not now): iCloud/CloudKit sync, an iPhone/Watch app beyond 7-day installs, and reliable desktop widgets.
 - **HealthKit doesn't exist on the Mac.** Steps and burn stay manual for now. Later: import the iPhone Health export, or an iPhone Shortcut that drops daily JSON into iCloud Drive (free), or an iPhone companion (paid).

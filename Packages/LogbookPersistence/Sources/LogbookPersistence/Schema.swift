@@ -20,6 +20,7 @@ public enum Schema {
         migrator.registerMigration("v1: change log triggers", migrate: v1ChangeLog)
         migrator.registerMigration("v2: food import batch", migrate: v2FoodImportBatch)
         migrator.registerMigration("v3: macros and nicotine", migrate: v3MacrosAndNicotine)
+        migrator.registerMigration("v4: meals", migrate: v4Meals)
         return migrator
     }
 
@@ -406,6 +407,34 @@ public enum Schema {
             LEFT JOIN "food" f ON f."logical_day" = d."logical_day"
             LEFT JOIN "daily_metric" burn ON burn."logical_day" = d."logical_day" AND burn."metric_key" = 'active_kcal'
             LEFT JOIN "daily_metric" steps ON steps."logical_day" = d."logical_day" AND steps."metric_key" = 'steps';
+            """)
+    }
+
+    // MARK: v4
+
+    /// Meals: a named group of dictionary items ("breakfast = coffee + 2 eggs").
+    /// Logging a meal writes one ordinary food entry per item.
+    static func v4Meals(_ db: Database) throws {
+        try db.execute(sql: """
+            CREATE TABLE "meal" (
+              "id" TEXT PRIMARY KEY NOT NULL,
+              "name" TEXT NOT NULL,
+              "aliases" TEXT NOT NULL DEFAULT '[]',
+              "created_at" TEXT NOT NULL,
+              "updated_at" TEXT NOT NULL,
+              "archived_at" TEXT
+            ) STRICT;
+
+            CREATE TABLE "meal_item" (
+              "id" TEXT PRIMARY KEY NOT NULL,
+              "meal_id" TEXT NOT NULL REFERENCES "meal"("id") ON DELETE CASCADE,
+              "food_id" TEXT NOT NULL REFERENCES "food"("id") ON DELETE CASCADE,
+              "servings" REAL NOT NULL DEFAULT 1,
+              "quantity" REAL,
+              "unit" TEXT,
+              "sort" INTEGER NOT NULL DEFAULT 0
+            ) STRICT;
+            CREATE INDEX "meal_item_meal" ON "meal_item"("meal_id");
             """)
     }
 
