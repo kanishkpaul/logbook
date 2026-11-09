@@ -62,6 +62,8 @@ struct RenderViewsTests {
                 }
             }.padding(), "review", width: 760)
         }
+        try render(WelcomeCard(model: model) { _ in }.padding(), "welcome", width: 860)
+        try render(DayTrackChart(state: state).padding(), "track-other-lane", width: 860)
         try render(CloseDayView(model: model), "close-day", width: 520)
         try render(MenuBarPanel(model: model, openMain: {}, quit: {}), "menu-bar-panel", width: 460)
         try render(QuickEntryField(model: model, text: "paneer 200g - 530 / 36 / 0 / 0 / 2.4c / 40f").padding(), "quick-entry-new-food", width: 620)

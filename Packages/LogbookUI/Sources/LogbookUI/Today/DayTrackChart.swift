@@ -5,7 +5,11 @@ import SwiftUI
 /// marks, and a "now" line. Running blocks are drawn up to now with a stripe.
 struct DayTrackChart: View {
     let state: TodayState
-    private let lanes = [Domain.sleep.title, Domain.work.title, Domain.natureCall.title, Domain.food.title]
+    /// Gym, break and other custom kinds get their own lane only when present.
+    private var lanes: [String] {
+        let hasOther = (state.track + state.plan.ghosts).contains { $0.domain == .other }
+        return [Domain.sleep.title, Domain.work.title, Domain.natureCall.title] + (hasOther ? [Domain.other.title] : []) + [Domain.food.title]
+    }
 
     var body: some View {
         Chart {
@@ -53,6 +57,7 @@ struct DayTrackChart: View {
         .chartLegend(.hidden)
         .frame(height: 150)
         .accessibilityLabel("24-hour track of sleep, work, nature's call and food, with the plan drawn faintly behind")
+        .accessibilityChartDescriptor(DayTrackChartDescriptor(state: state))
     }
 }
 

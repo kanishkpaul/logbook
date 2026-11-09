@@ -103,6 +103,11 @@ public struct CloseDayView: View {
                         }
                         Text("Or type “plan tomorrow 1000-1300 deep work” in Quick Entry.").font(.caption).foregroundStyle(.secondary)
                     }
+                    if let state = model.state {
+                        Section("Today in short") {
+                            RecapView(kind: .daily, facts: RecapFacts.daily(state, insights: model.insights), writer: model.recaps)
+                        }
+                    }
                     Section("Today") {
                         ForEach(close.summary, id: \.self) { Text($0) }
                         if close.summary.isEmpty { Text("Nothing logged yet").foregroundStyle(.secondary) }

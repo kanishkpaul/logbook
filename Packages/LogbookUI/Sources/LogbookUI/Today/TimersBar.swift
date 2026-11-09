@@ -26,7 +26,7 @@ public struct TimersBar: View {
                     }
                     Spacer()
                     Button("Stop") { model.stopTimer(timer.id) }
-                        .keyboardShortcut(running.count == 1 ? KeyboardShortcut(".", modifiers: .command) : nil)
+                        .help("Stop (⌘. stops all timers)")
                 }
             }
             HStack(spacing: 8) {

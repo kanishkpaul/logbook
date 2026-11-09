@@ -8,6 +8,8 @@ public struct ReviewState: Equatable {
     public var title: String
     public var sections: [Section]
     public var loggedDays: Int
+    /// Structured facts for the "In short" recap.
+    public var facts: [RecapFact] = []
 
     public struct Section: Equatable, Identifiable {
         public var title: String
@@ -52,6 +54,7 @@ public struct ReviewPresenter {
         func count(_ n: Int, _ one: String, _ many: String) -> String { "\(n) \(n == 1 ? one : many)" }
         let whole = { (v: Double) in NutritionFormat.whole(v) }
         var sections: [ReviewState.Section] = []
+        var facts: [RecapFact] = []
 
         // Work
         let work = values(this, { $0.workMin.map(Double.init) }), workLast = values(last, { $0.workMin.map(Double.init) })
@@ -64,6 +67,8 @@ public struct ReviewPresenter {
                 .filter { Durations.minutes(from: $0.startUTC, to: $0.endUTC ?? $0.startUTC) >= 50 }.count
             lines.append("\(deep) deep-work block\(deep == 1 ? "" : "s") of 50 minutes or more.")
             sections.append(.init(title: "Work", domain: .work, lines: lines))
+            facts.append(RecapFact(id: "work", label: "work this week", value: dur(work.reduce(0, +)),
+                                   comparison: change(avg(work), avg(workLast), { "\(dur($0)) a day" }).dropFirst(2).description.nilIfEmpty))
         }
 
         // Sleep
@@ -82,6 +87,8 @@ public struct ReviewPresenter {
                 lines.append("Usually asleep around \(HistoryPresenter.clock(Double(onset))); bedtime varied by ±\(dur(spread)).")
             }
             sections.append(.init(title: "Sleep", domain: .sleep, lines: lines))
+            facts.append(RecapFact(id: "sleep", label: "average sleep a night", value: dur(avg(sleep)!),
+                                   comparison: change(avg(sleep), avg(sleepLast), dur).dropFirst(2).description.nilIfEmpty))
         }
 
         // Food
@@ -95,6 +102,8 @@ public struct ReviewPresenter {
             let missing = this.compactMap(\.foodNeedingValues).reduce(0, +)
             if missing > 0 { lines.append("\(count(missing, "food still needs", "foods still need")) values.") }
             sections.append(.init(title: "Food", domain: .food, lines: lines))
+            facts.append(RecapFact(id: "kcal", label: "energy eaten on a typical day", value: "\(whole(avg(kcal)!)) kcal",
+                                   comparison: change(avg(kcal), avg(kcalLast), { "\(whole($0)) kcal" }).dropFirst(2).description.nilIfEmpty))
         }
 
         // Body
@@ -114,7 +123,10 @@ public struct ReviewPresenter {
         let plans = range.plans.filter { $0.logicalDay >= weekStart && $0.logicalDay <= weekStart.adding(days: 6) && $0.status != .skipped && $0.kind == .work }
         if !done.isEmpty || !plans.isEmpty {
             var lines: [String] = []
-            if !done.isEmpty { lines.append("\(done.count) task\(done.count == 1 ? "" : "s") done\(dropped.isEmpty ? "" : ", \(dropped.count) dropped").") }
+            if !done.isEmpty {
+                lines.append("\(done.count) task\(done.count == 1 ? "" : "s") done\(dropped.isEmpty ? "" : ", \(dropped.count) dropped").")
+                facts.append(RecapFact(id: "tasks", label: "tasks done this week", value: "\(done.count)"))
+            }
             if !plans.isEmpty {
                 let planned = plans.map { DateInterval(start: $0.startUTC, end: $0.endUTC) }
                 let actual = range.blocks.filter { $0.kind == .work }.compactMap { b in b.endUTC.map { DateInterval(start: b.startUTC, end: $0) } }
@@ -125,6 +137,10 @@ public struct ReviewPresenter {
         }
 
         let logged = this.filter { !$0.isEmpty }.count
-        return ReviewState(title: title, sections: sections, loggedDays: logged)
+        return ReviewState(title: title, sections: sections, loggedDays: logged, facts: facts)
     }
+}
+
+extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

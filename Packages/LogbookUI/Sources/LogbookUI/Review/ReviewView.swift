@@ -36,10 +36,12 @@ public final class ReviewModel {
 public struct ReviewView: View {
     let model: ReviewModel
     let insights: [Insight]
+    let writer: RecapWriter
 
-    public init(model: ReviewModel, insights: [Insight]) {
+    public init(model: ReviewModel, insights: [Insight], writer: RecapWriter = RecapWriter()) {
         self.model = model
         self.insights = insights
+        self.writer = writer
     }
 
     public var body: some View {
@@ -47,6 +49,13 @@ public struct ReviewView: View {
             VStack(alignment: .leading, spacing: 20) {
                 if let state = model.state {
                     Text("\(state.loggedDays) of 7 days logged").foregroundStyle(.secondary)
+                    if !state.facts.isEmpty {
+                        GroupBox("In short") {
+                            RecapView(kind: .weekly, facts: state.facts, writer: writer)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(4)
+                        }
+                    }
                     if state.sections.isEmpty {
                         ContentUnavailableView("Nothing logged this week", systemImage: "calendar")
                     }

@@ -22,10 +22,14 @@ public final class TodayModel {
     public private(set) var quickAdd: [String] = []
     /// Food entries logged yesterday (for "Copy yesterday").
     public private(set) var yesterdayFoodCount = 0
+    /// True until the first thing is logged (and the welcome isn't dismissed).
+    public private(set) var showWelcome = false
     /// Up to three insight cards (deterministic; see LogbookCore/Detectors).
     public private(set) var insights: [Insight] = []
     @ObservationIgnored private var insightsComputedAt: Date?
     @ObservationIgnored public var engine = InsightEngine()
+    /// Writes the daily and weekly recaps (on-device model, template fallback).
+    public let recaps = RecapWriter()
 
     public var caffeineHalfLifeHours: Double {
         didSet { UserDefaults.standard.set(caffeineHalfLifeHours, forKey: "caffeineHalfLifeHours"); represent() }
@@ -114,6 +118,7 @@ public final class TodayModel {
             nicotine: HalfLifeModel(halfLife: max(0.25, nicotineHalfLifeHours) * 3600)
         )
         state = presenter.present(snapshot, now: store.now())
+        showWelcome = !UserDefaults.standard.bool(forKey: "welcomeDismissed") && !((try? store.hasAnyLogs()) ?? true)
         quickAdd = (try? store.quickAddNames()) ?? []
         yesterdayFoodCount = (try? store.foodCount(on: snapshot.day.previous)) ?? 0
         refreshInsights()
@@ -133,6 +138,11 @@ public final class TodayModel {
         } catch {
             lastError = "Insights: \(error)"
         }
+    }
+
+    public func dismissWelcome() {
+        UserDefaults.standard.set(true, forKey: "welcomeDismissed")
+        showWelcome = false
     }
 
     public func dismissInsight(_ insight: Insight) {

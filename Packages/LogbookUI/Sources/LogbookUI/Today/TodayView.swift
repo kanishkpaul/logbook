@@ -4,10 +4,14 @@ import SwiftUI
 /// in the system, and the day's log.
 public struct TodayView: View {
     let model: TodayModel
-    @State private var closingDay = false
+    @Binding var closingDay: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var go: (RootScreen) -> Void
 
-    public init(model: TodayModel) {
+    public init(model: TodayModel, closingDay: Binding<Bool> = .constant(false), go: @escaping (RootScreen) -> Void = { _ in }) {
         self.model = model
+        _closingDay = closingDay
+        self.go = go
     }
 
     public var body: some View {
@@ -16,6 +20,10 @@ public struct TodayView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     QuickEntryField(model: model)
                     QuickAddBar(model: model)
+
+                    if model.showWelcome {
+                        WelcomeCard(model: model, go: go)
+                    }
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 12)], spacing: 12) {
                         ForEach(state.heroes) { HeroCard(hero: $0) }
@@ -55,6 +63,9 @@ public struct TodayView: View {
                 .padding(20)
                 .frame(maxWidth: 980)
                 .frame(maxWidth: .infinity)
+                // Numbers count to new values and cards settle in; off with Reduce Motion.
+                .animation(reduceMotion ? nil : .spring(duration: 0.35), value: state.heroes)
+                .animation(reduceMotion ? nil : .spring(duration: 0.35), value: model.insights)
             } else {
                 ProgressView().padding(40)
             }
@@ -67,7 +78,7 @@ public struct TodayView: View {
                 } label: {
                     Label("Close the day", systemImage: "moon.zzz")
                 }
-                .help("Fill gaps, burn and missing values, then see the day's summary")
+                .help("Fill gaps, burn and missing values, then plan tomorrow (⇧⌘D)")
             }
         }
         .sheet(isPresented: $closingDay) { CloseDayView(model: model) }

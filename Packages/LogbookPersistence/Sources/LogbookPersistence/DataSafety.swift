@@ -60,6 +60,28 @@ public struct Backups: Sendable {
             try FileManager.default.removeItem(at: old)
         }
     }
+
+    /// iCloud Drive's "Logbook Backups" folder, if iCloud Drive is on.
+    public static var iCloudDriveFolder: URL? {
+        let root = URL.homeDirectory.appending(path: "Library/Mobile Documents/com~apple~CloudDocs", directoryHint: .isDirectory)
+        return FileManager.default.fileExists(atPath: root.path) ? root.appending(path: "Logbook Backups", directoryHint: .isDirectory) : nil
+    }
+
+    /// Copies the newest snapshot (never the live database) into `folder`,
+    /// keeping the same number of copies there. Returns the copy, if any.
+    @discardableResult
+    public func mirror(to folder: URL) throws -> URL? {
+        guard let latest = list().first else { return nil }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let target = folder.appending(path: latest.lastPathComponent)
+        if FileManager.default.fileExists(atPath: target.path) { try FileManager.default.removeItem(at: target) }
+        try FileManager.default.copyItem(at: latest, to: target)
+        let copies = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.lastPathComponent.hasPrefix("logbook-") && $0.pathExtension == "sqlite" }
+            .sorted { $0.lastPathComponent > $1.lastPathComponent }
+        for old in copies.dropFirst(max(1, keep)) { try FileManager.default.removeItem(at: old) }
+        return target
+    }
 }
 
 /// Full export of every table to JSON (restorable) or CSV (for spreadsheets).

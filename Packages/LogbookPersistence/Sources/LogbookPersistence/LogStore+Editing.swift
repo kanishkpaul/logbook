@@ -50,6 +50,15 @@ extension LogStore {
         foodRow(name: name, nutrition: Nutrition())
     }
 
+    /// Whether anything has ever been logged (for the first-run welcome).
+    public func hasAnyLogs() throws -> Bool {
+        try database.read { db in
+            try Int.fetchOne(db, sql: """
+                SELECT (SELECT count(*) FROM time_block) + (SELECT count(*) FROM food_log_entry) + (SELECT count(*) FROM metric_sample)
+                """) ?? 0 > 0
+        }
+    }
+
     // MARK: Entries
 
     /// Fills in or corrects an entry's values (e.g. at Close the day).

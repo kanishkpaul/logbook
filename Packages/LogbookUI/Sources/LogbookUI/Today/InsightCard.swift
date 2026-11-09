@@ -22,9 +22,11 @@ struct InsightCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: symbol).foregroundStyle(.secondary)
+                Image(systemName: symbol).foregroundStyle(.secondary).accessibilityHidden(true)
                 Text(insight.title).fixedSize(horizontal: false, vertical: true)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityValue("\(insight.confidence.rawValue) confidence")
             HStack(spacing: 10) {
                 Text("\(insight.confidence.rawValue) confidence").font(.caption).foregroundStyle(.secondary)
                 Spacer()

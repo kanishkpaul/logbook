@@ -42,7 +42,9 @@ struct HeroCard: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.background.secondary, in: .rect(cornerRadius: 12))
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(hero.title)
+        .accessibilityValue([hero.value + (hero.unit.isEmpty ? "" : " \(hero.unit)"), hero.headline, hero.detail].compactMap { $0 }.joined(separator: ", "))
     }
 }
 

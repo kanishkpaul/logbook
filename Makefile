@@ -12,7 +12,7 @@ XCB      := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination 'platf
             -derivedDataPath $(DD) -skipMacroValidation
 PACKAGES := LogbookCore LogbookPersistence LogbookImport LogbookUI
 
-.PHONY: build release run stop test test-core test-persistence test-import test-ui render demo format-check schema install spike-status import-preview import-apply import-batches clean
+.PHONY: icon build release run stop test test-core test-persistence test-import test-ui render demo format-check schema install spike-status import-preview import-apply import-batches clean
 
 build:
 	$(XCB) -configuration Debug build | grep -E 'error|warning: |BUILD' || true
@@ -81,6 +81,10 @@ import-apply:
 
 import-batches:
 	$(IMPORT) batches $(ARGS)
+
+# Regenerates the app icon from tools/make-icon.swift.
+icon:
+	swift tools/make-icon.swift App/Assets.xcassets/AppIcon.appiconset
 
 clean:
 	rm -rf build $(addprefix Packages/,$(addsuffix /.build,$(PACKAGES)))

@@ -46,7 +46,7 @@ struct MetricChart: View {
                 }
             }
             .frame(height: height)
-            .accessibilityLabel("\(series.spec.title): \(series.headline)")
+            .accessibilityChartDescriptor(SeriesChartDescriptor(series: series))
             HStack(spacing: 12) {
                 Label("7-day average", systemImage: "line.diagonal").foregroundStyle(.secondary)
                 if series.typical != nil {

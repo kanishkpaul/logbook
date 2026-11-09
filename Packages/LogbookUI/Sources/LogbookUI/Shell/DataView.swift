@@ -11,11 +11,25 @@ public final class DataModel {
     public let backups: Backups
     public private(set) var snapshots: [URL] = []
     public var message: String?
+    /// Also copy each snapshot here (e.g. iCloud Drive). Never the live database.
+    public var mirrorFolder: URL? {
+        didSet { UserDefaults.standard.set(mirrorFolder?.path, forKey: "backupMirrorPath") }
+    }
 
     public init(store: LogStore, backups: Backups? = nil) {
         self.store = store
         self.backups = backups ?? Backups(database: store.database)
+        mirrorFolder = UserDefaults.standard.string(forKey: "backupMirrorPath").map { URL(filePath: $0, directoryHint: .isDirectory) }
         reload()
+    }
+
+    private func mirrorIfSet() {
+        guard let mirrorFolder else { return }
+        do {
+            try backups.mirror(to: mirrorFolder)
+        } catch {
+            message = "Mirror failed: \(error.localizedDescription)"
+        }
     }
 
     public var exportsDirectory: URL { AppDatabase.defaultDirectory.appending(path: "Exports") }
@@ -28,6 +42,7 @@ public final class DataModel {
     public func ensureDaily() {
         do {
             if try backups.ensureDaily(day: store.boundary.logicalDay(containing: store.now(), in: store.timeZone())) != nil {
+                mirrorIfSet()
                 reload()
             }
         } catch {
@@ -39,6 +54,7 @@ public final class DataModel {
         do {
             let url = try backups.backUp(day: store.boundary.logicalDay(containing: store.now(), in: store.timeZone()))
             message = "Backed up to \(url.lastPathComponent)"
+            mirrorIfSet()
             reload()
         } catch {
             message = "Backup failed: \(error)"
@@ -109,6 +125,27 @@ public struct DataView: View {
                 Text("Backups")
             } footer: {
                 Text("A snapshot is taken every day the app runs; the last 30 are kept. To restore, quit Logbook and copy a snapshot over logbook.sqlite (or use `logbook-import restore`).")
+            }
+
+            Section {
+                Toggle("Also keep a copy in iCloud Drive", isOn: Binding(
+                    get: { model.mirrorFolder != nil },
+                    set: { on in model.mirrorFolder = on ? Backups.iCloudDriveFolder : nil; if on { model.backUpNow() } }
+                ))
+                .disabled(Backups.iCloudDriveFolder == nil && model.mirrorFolder == nil)
+                if let folder = model.mirrorFolder {
+                    HStack {
+                        Text(folder.path).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        Spacer()
+                        Button("Reveal") { model.reveal(folder) }.buttonStyle(.borderless)
+                    }
+                }
+            } header: {
+                Text("Mirror")
+            } footer: {
+                Text(Backups.iCloudDriveFolder == nil
+                     ? "iCloud Drive isn't on for this Mac."
+                     : "Snapshots are copied to iCloud Drive › Logbook Backups. The live database never leaves this Mac.")
             }
 
             Section {

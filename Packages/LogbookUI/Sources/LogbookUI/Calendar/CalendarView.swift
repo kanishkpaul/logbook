@@ -84,6 +84,7 @@ public final class CalendarModel {
 
 public struct CalendarView: View {
     @Bindable var model: CalendarModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(model: CalendarModel) {
         self.model = model
@@ -97,6 +98,7 @@ public struct CalendarView: View {
             case .month: monthView
             }
         }
+        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: model.mode)
         .navigationTitle(title)
         .toolbar {
             ToolbarItemGroup {

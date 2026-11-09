@@ -54,6 +54,19 @@ import Testing
         #expect(backups.list().map(\.lastPathComponent) == ["logbook-2026-11-05.sqlite", "logbook-2026-11-04.sqlite", "logbook-2026-11-03.sqlite"])
     }
 
+    @Test func mirrorCopiesSnapshotsNotTheLiveFile() throws {
+        let store = try seeded()
+        let backups = Backups(database: store.database, directory: tempDir(), keep: 2)
+        let mirror = tempDir()
+        #expect(try backups.mirror(to: mirror) == nil, "nothing to mirror yet")
+        for i in 1...3 { try backups.backUp(day: LogicalDay("2026-11-0\(i)")!) }
+        for _ in 0..<2 { try backups.mirror(to: mirror) }
+        try backups.backUp(day: LogicalDay("2026-11-04")!)
+        try backups.mirror(to: mirror)
+        let names = try FileManager.default.contentsOfDirectory(atPath: mirror.path).sorted()
+        #expect(names == ["logbook-2026-11-03.sqlite", "logbook-2026-11-04.sqlite"])
+    }
+
     // MARK: JSON
 
     @Test func jsonRoundTripReproducesTheDatabase() throws {

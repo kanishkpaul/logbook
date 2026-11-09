@@ -251,7 +251,7 @@ Statistical safeguards: "not logged" ≠ zero; estimates down-weighted; false-di
 
 Planned-block and task-due reminders are ones you asked for, so they don't count toward the cap. Caps: max 2 unrequested notifications per day; never during a running sleep block; quiet hours; three ignored in a row → frequency halves and an inline "turn off" appears.
 
-### 10c. On-device AI (later, optional)
+### 10c. On-device AI (built 9 Nov 2026: headline + sentence openings only; Swift inserts all numbers)
 Apple Foundation Models writes the daily recap and weekly review prose **from facts Swift has already computed**. It cannot introduce numbers (validated); if it's unavailable or fails, built-in templates are used. Nothing leaves the Mac.
 
 ---

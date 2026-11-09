@@ -17,6 +17,33 @@ struct LogbookApp: App {
             CommandGroup(after: .newItem) {
                 Button("Quick Entry") { delegate.toggleQuickEntry() }
                     .keyboardShortcut("l", modifiers: .command)
+                Button("Command Palette…") { delegate.showMainWindow(); delegate.router.showingPalette = true }
+                    .keyboardShortcut("k", modifiers: .command)
+                Button("Close the Day…") { delegate.showMainWindow(); delegate.router.closeTheDay() }
+                    .keyboardShortcut("d", modifiers: [.command, .shift])
+            }
+            CommandMenu("Go") {
+                ForEach(RootScreen.allCases, id: \.self) { screen in
+                    if let digit = screen.shortcutDigit {
+                        Button(screen.title) { delegate.showMainWindow(); delegate.router.go(screen) }
+                            .keyboardShortcut(KeyEquivalent(digit), modifiers: .command)
+                    } else {
+                        Button(screen.title) { delegate.showMainWindow(); delegate.router.go(screen) }
+                    }
+                }
+            }
+            CommandMenu("Timer") {
+                Button("Start Work") { delegate.today.startTimer(.work) }
+                    .keyboardShortcut("w", modifiers: [.command, .option])
+                Button("Start Sleep") { delegate.today.startTimer(.sleep) }
+                    .keyboardShortcut("s", modifiers: [.command, .option])
+                Button("Start Nature's Call") { delegate.today.startTimer(.natureCall) }
+                    .keyboardShortcut("n", modifiers: [.command, .option])
+                Divider()
+                Button("Stop All Timers") {
+                    for t in delegate.today.state?.running ?? [] { delegate.today.stopTimer(t.id) }
+                }
+                .keyboardShortcut(".", modifiers: .command)
             }
         }
 
@@ -32,7 +59,8 @@ private struct MainWindow: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        RootView(today: delegate.today, dictionary: delegate.dictionary, data: delegate.data) {
+        RootView(today: delegate.today, dictionary: delegate.dictionary, data: delegate.data, router: delegate.router,
+                 openQuickEntry: { delegate.toggleQuickEntry() }) {
             DiagnosticsView(model: delegate.diagnostics)
         }
         .onAppear { delegate.openMainWindow = { openWindow(id: "main") } }
@@ -47,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let dictionary: DictionaryModel
     let data: DataModel
     let diagnostics: DiagnosticsModel
+    let router = AppRouter()
     var openMainWindow: (() -> Void)?
     var quickEntryShortcut: String { hotKey?.active?.label ?? "none (all candidates taken)" }
 
