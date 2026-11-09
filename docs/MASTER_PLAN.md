@@ -201,7 +201,7 @@ Logging records what happened; planning decides what should happen. Both live on
 - Example insights: "You usually start planned deep work 35 min late", "Tasks in #horizon take 1.6× your estimate", "Tomorrow has 9 h of tasks but 5 h of free blocks".
 - Same rules as every other insight: personal baselines, minimum-data gates, no guilt colouring.
 
-### 9d. Data model additions
+### 9d. Data model additions (built 9 Nov 2026; `task` is `TodoTask` in Swift)
 
 | Table | Key fields | Rules |
 |---|---|---|

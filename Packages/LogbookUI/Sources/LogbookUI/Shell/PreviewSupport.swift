@@ -41,6 +41,13 @@ public enum PreviewSupport {
             try store.logFood(name: "cig", food: cig, consumedAt: at(14))
             try store.logFood(name: "Chicken roll", consumedAt: at(16))
             try store.recordMetric(key: "steps", value: 7400)
+            try store.addPlanBlock(kind: .work, start: at(9), end: at(12), label: "study")
+            try store.addPlanBlock(kind: .work, start: at(14), end: at(17), label: "deep work")
+            try store.addPlanBlock(kind: BlockKind(rawValue: "gym"), start: at(18), end: at(19), label: "gym")
+            try store.addPlanBlock(kind: .sleep, start: at(23.5), end: at(31.5))
+            try store.addTask(NewTask(title: "write SIH deck", listName: "horizon", priority: 2, due: store.boundary.logicalDay(containing: at(12), in: .current), estimateMin: 45))
+            try store.addTask(NewTask(title: "reply to Ana", scheduled: store.boundary.logicalDay(containing: at(12), in: .current)))
+            try store.addTask(NewTask(title: "standup notes", scheduled: store.boundary.logicalDay(containing: at(12, -1), in: .current), recurrence: Recurrence(frequency: .weekly, weekdays: [1, 2, 3, 4, 5])))
             if Date() > at(15) { try store.startBlock(kind: .work, label: "deep work") }
         } catch {
             print("preview seed failed: \(error)")

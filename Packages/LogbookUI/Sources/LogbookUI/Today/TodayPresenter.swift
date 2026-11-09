@@ -182,12 +182,89 @@ public struct TodayPresenter {
             summary: summary
         )
 
-        return TodayState(
+        var state = TodayState(
             day: s.day, title: Self.formatter("EEEE, d MMMM", timeZone).string(from: s.window.start.addingTimeInterval(12 * 3600)),
             window: s.window, now: now, heroes: heroes, track: track, foodMarks: marks, substances: substances,
             running: running, blocks: blockRows, foods: foodRows, samples: sampleRows, foodTotals: totals,
             weekAverage: weekAverage, closeDay: close
         )
+        state.plan = presentPlan(s, now: now, timeFmt: timeFmt)
+        state.closeDay.unfinishedTasks = state.plan.tasks.filter { !$0.isDone }
+        state.closeDay.unreviewedPlans = state.plan.items.filter { $0.status == .planned && $0.isPast }
+        return state
+    }
+
+    func presentPlan(_ s: DaySnapshot, now: Date, timeFmt: DateFormatter) -> PlanState {
+        var plan = PlanState()
+        let active = s.plans.filter { $0.status != .skipped }
+        plan.items = s.plans.map { p in
+            let domain = Domain(kind: p.kind) ?? .work
+            return .init(id: p.id, domain: domain,
+                         title: p.label.isEmpty ? domain.title : p.label,
+                         times: "\(timeFmt.string(from: p.startUTC))–\(timeFmt.string(from: p.endUTC))",
+                         duration: Durations.compact(minutes: p.minutes), status: p.status,
+                         isNow: p.startUTC <= now && now < p.endUTC, isPast: p.endUTC <= now, start: p.startUTC)
+        }
+        plan.ghosts = active.compactMap { p in
+            let start = max(p.startUTC, s.window.start), end = min(p.endUTC, s.window.end)
+            guard end > start else { return nil }
+            let domain = Domain(kind: p.kind) ?? .work
+            return .init(id: p.id, lane: domain.title, domain: domain, start: start, end: end, label: p.label, isRunning: false)
+        }
+        plan.upNext = plan.items.first { $0.isNow && $0.status == .planned } ?? plan.items.first { !$0.isPast && !$0.isNow && $0.status == .planned }
+
+        // Planned vs done: work only, up to now, overlap of time (no scoring, no colour).
+        let planned = active.filter { $0.kind == .work }.compactMap { p -> DateInterval? in
+            let end = min(p.endUTC, now)
+            return end > p.startUTC ? DateInterval(start: p.startUTC, end: end) : nil
+        }
+        let totalPlanned = active.filter { $0.kind == .work }.reduce(0) { $0 + $1.minutes }
+        if totalPlanned > 0 {
+            let actual = s.blocks.filter { $0.kind == .work }.map { DateInterval(start: $0.startUTC, end: max($0.endUTC ?? now, $0.startUTC)) }
+            let matched = Durations.minutes(Intervals.overlap(planned, actual))
+            let soFar = Durations.minutes(Intervals.total(planned))
+            var parts = ["Planned \(Durations.compact(minutes: totalPlanned)) of work"]
+            if soFar > 0 {
+                parts.append("\(Durations.compact(minutes: matched)) of the \(Durations.compact(minutes: soFar)) planned so far happened as planned")
+            }
+            let drifts = s.blocks.compactMap { b -> Double? in
+                guard let pid = b.planBlockID, let p = s.plans.first(where: { $0.id == pid }) else { return nil }
+                return b.startUTC.timeIntervalSince(p.startUTC) / 60
+            }
+            if !drifts.isEmpty {
+                let median = Stats.quantile(drifts.sorted(), 0.5)
+                if abs(median) >= 5 {
+                    parts.append("started \(Durations.compact(minutes: Int(abs(median).rounded()))) \(median > 0 ? "later" : "earlier") than planned")
+                }
+            }
+            plan.summary = parts.joined(separator: " · ")
+        }
+
+        func day(_ d: LogicalDay) -> String {
+            if d == s.day { return "today" }
+            if d == s.day.next { return "tomorrow" }
+            if d == s.day.previous { return "yesterday" }
+            return Self.formatter("EEE d MMM", timeZone).string(from: DayBoundary.calendarDay.start(of: d, in: timeZone).addingTimeInterval(43_200))
+        }
+        plan.tasks = s.tasks
+            .sorted { a, b in
+                let ka = (a.task.status == .open ? 0 : 1, -a.task.priority), kb = (b.task.status == .open ? 0 : 1, -b.task.priority)
+                return ka < kb
+            }
+            .map { row in
+                let t = row.task
+                var parts: [String] = []
+                if let e = t.estimateMin { parts.append("~\(Durations.compact(minutes: e))") }
+                if row.actualMin > 0 { parts.append("\(Durations.compact(minutes: row.actualMin)) spent") }
+                if let d = t.dueDay { parts.append("due \(day(d))") }
+                if let sd = t.scheduledDay, sd < s.day { parts.append("from \(day(sd))") }
+                if let l = row.listName { parts.append("#\(l)") }
+                if let r = t.recurrence { parts.append(r.summary) }
+                let overdue = t.status == .open && ((t.dueDay.map { $0 < s.day } ?? false) || (t.scheduledDay.map { $0 < s.day } ?? false))
+                return .init(id: t.id, title: t.title, detail: parts.joined(separator: " · "), priority: t.priority,
+                             isDone: t.status == .done, isOverdue: overdue)
+            }
+        return plan
     }
 
     static func formatter(_ format: String, _ tz: TimeZone) -> DateFormatter {

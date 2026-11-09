@@ -24,6 +24,11 @@ public struct DaySnapshot: Sendable, Equatable {
     public var history: [DailyFacts]
     /// Starts of finished sleep blocks in the 28 days up to the window's end.
     public var sleepStarts: [Date] = []
+    /// Planned blocks overlapping the window.
+    public var plans: [PlanBlock] = []
+    /// Open tasks for the day (scheduled or due on or before it, not Someday),
+    /// plus tasks completed during the day.
+    public var tasks: [TaskRow] = []
 
     public var today: DailyFacts { history.last ?? .empty(day) }
     /// The 28 days before today (for baselines).
@@ -108,7 +113,19 @@ extension LogStore {
             .order(by: \.startUTC)
             .fetchAll(db)
             .map(\.startUTC)
+        let plans = try PlanBlock
+            .where { $0.deletedAt.is(nil) && $0.startUTC < end && $0.endUTC > start }
+            .order(by: \.startUTC)
+            .fetchAll(db)
+        let tasks = try taskRows(db, doneSince: start).filter { row in
+            let t = row.task
+            if t.status != .open { return t.status == .done && (t.completedAt.map { $0 >= start && $0 < end } ?? false) }
+            guard !t.isSomeday else { return false }
+            let onOrBefore = { (d: LogicalDay?) in d.map { $0 <= day } ?? false }
+            return onOrBefore(t.scheduledDay) || onOrBefore(t.dueDay)
+        }
         return DaySnapshot(day: day, window: window, blocks: blocks, running: running, foods: foods,
-                           samples: samples, doses: doses, history: history, sleepStarts: sleepStarts)
+                           samples: samples, doses: doses, history: history, sleepStarts: sleepStarts,
+                           plans: plans, tasks: tasks)
     }
 }

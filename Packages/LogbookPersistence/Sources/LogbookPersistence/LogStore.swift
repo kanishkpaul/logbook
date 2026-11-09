@@ -144,13 +144,19 @@ public struct LogStore: Sendable {
 
     /// Starts a timer: a block with no end, saved immediately.
     @discardableResult
-    public func startBlock(kind: BlockKind, label: String = "", categoryID: Category.ID? = nil) throws -> TimeBlock {
+    public func startBlock(
+        kind: BlockKind,
+        label: String = "",
+        categoryID: Category.ID? = nil,
+        taskID: TodoTask.ID? = nil,
+        planBlockID: PlanBlock.ID? = nil
+    ) throws -> TimeBlock {
         let t = now(), tz = timeZone()
         let block = TimeBlock(
             id: uuid(), kind: kind, label: label, categoryID: categoryID,
             startUTC: t, endUTC: nil, tzIdentifier: tz.identifier,
             logicalDay: Attribution.day(kind: kind, start: t, end: nil, boundary: boundary, timeZone: tz),
-            source: .timer, createdAt: t, updatedAt: t
+            source: .timer, createdAt: t, updatedAt: t, taskID: taskID, planBlockID: planBlockID
         )
         try database.write { db in
             if try !TimeBlock.where({ $0.kind.eq(kind) && $0.endUTC.is(nil) && $0.deletedAt.is(nil) }).fetchAll(db).isEmpty {

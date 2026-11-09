@@ -40,6 +40,8 @@ public struct QuickEntry: Sendable {
         case stop(TimeBlock)
         case copy(from: LogicalDay, to: LogicalDay)
         case saveMeal(name: String, parts: [MealPart])
+        case addTask(NewTask)
+        case addPlan(kind: BlockKind, start: Date, end: Date, label: String, raw: String)
     }
 
     // MARK: Interpret
@@ -85,6 +87,30 @@ public struct QuickEntry: Sendable {
             out.lines = [PreviewLine(kind: "timer", title: "Stop \(Self.name(target.kind)) timer",
                                      detail: [target.label, Durations.compact(minutes: minutes)].filter { !$0.isEmpty }.joined(separator: " · "))]
             out.action = .stop(target)
+            return out
+        }
+
+        if lower.hasPrefix("t "), text.count > 2 {
+            let t = PlanShorthand.task(String(text.dropFirst(2)), today: today)
+            guard !t.title.isEmpty else { out.problem = "Give the task a title: t write deck ~45m fri"; return out }
+            out.lines = [PreviewLine(kind: "task", title: t.title, detail: Self.taskDetail(t, today: today, tz: tz))]
+            out.action = .addTask(NewTask(title: t.title, listName: t.listName, priority: t.priority, due: t.due,
+                                          scheduled: t.scheduled, someday: t.someday, estimateMin: t.estimateMinutes,
+                                          recurrence: t.recurrence, rawText: text))
+            return out
+        }
+
+        if lower.hasPrefix("plan ") {
+            guard let p = PlanShorthand.plan(String(text.dropFirst(5)), today: today) else {
+                out.problem = "Plan needs times: plan 1400-1600 deep work"
+                return out
+            }
+            let start = p.start.date(in: tz), end = p.end.date(in: tz)
+            let fmt = Self.timeFormatter(tz)
+            let dayText = p.day == today ? "today" : p.day == today.next ? "tomorrow" : Self.dayFormatter(tz).string(from: start)
+            out.lines = [PreviewLine(kind: "plan", title: "Plan \(Self.name(p.kind))\(p.label.isEmpty ? "" : " · \(p.label)")",
+                                     detail: "\(dayText) \(fmt.string(from: start))–\(fmt.string(from: end)) · \(Durations.compact(minutes: Durations.minutes(from: start, to: end)))")]
+            out.action = .addPlan(kind: p.kind, start: start, end: end, label: p.label, raw: text)
             return out
         }
 
@@ -243,6 +269,12 @@ public struct QuickEntry: Sendable {
         case .saveMeal(let name, let parts):
             try store.saveMeal(name: name, parts: parts)
             return "Saved meal \(name)"
+        case .addTask(let task):
+            try store.addTask(task)
+            return "Added task \(task.title)"
+        case .addPlan(let kind, let start, let end, let label, let raw):
+            try store.addPlanBlock(kind: kind, start: start, end: end, label: label, rawText: raw)
+            return "Planned \(Self.name(kind))"
         }
     }
 
@@ -269,6 +301,31 @@ public struct QuickEntry: Sendable {
         case .natureCall: "nature's call"
         default: kind.rawValue
         }
+    }
+
+    static func dayFormatter(_ tz: TimeZone) -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_GB")
+        f.timeZone = tz
+        f.dateFormat = "EEE d MMM"
+        return f
+    }
+
+    /// `~45m · !! · due Fri 13 Nov · #horizon · every Mon`.
+    static func taskDetail(_ t: ParsedTask, today: LogicalDay, tz: TimeZone) -> String {
+        func day(_ d: LogicalDay) -> String {
+            d == today ? "today" : d == today.next ? "tomorrow"
+                : dayFormatter(tz).string(from: DayBoundary.calendarDay.start(of: d, in: tz).addingTimeInterval(43_200))
+        }
+        var parts: [String] = []
+        if let e = t.estimateMinutes { parts.append("~\(Durations.compact(minutes: e))") }
+        if t.priority > 0 { parts.append(String(repeating: "!", count: t.priority)) }
+        if let d = t.due { parts.append("due \(day(d))") }
+        if let s = t.scheduled { parts.append("on \(day(s))") }
+        if t.someday { parts.append("someday") }
+        if let l = t.listName { parts.append("#\(l)") }
+        if let r = t.recurrence { parts.append(r.summary) }
+        return parts.isEmpty ? "inbox" : parts.joined(separator: " · ")
     }
 
     static func timeFormatter(_ tz: TimeZone) -> DateFormatter {

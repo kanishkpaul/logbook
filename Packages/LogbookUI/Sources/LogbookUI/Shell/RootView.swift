@@ -4,12 +4,13 @@ import SwiftUI
 /// The main window: a sidebar of screens. More screens arrive in later milestones.
 public struct RootView<Diagnostics: View>: View {
     public enum Screen: String, Hashable, CaseIterable {
-        case today, calendar, work, sleep, body, trends, dictionary, importing, data, diagnostics
+        case today, calendar, tasks, work, sleep, body, trends, dictionary, importing, data, diagnostics
 
         var title: String {
             switch self {
             case .today: "Today"
             case .calendar: "Calendar"
+            case .tasks: "Tasks"
             case .work: "Work"
             case .sleep: "Sleep"
             case .body: "Body"
@@ -25,6 +26,7 @@ public struct RootView<Diagnostics: View>: View {
             switch self {
             case .today: "sun.max"
             case .calendar: "calendar"
+            case .tasks: "checklist"
             case .work: Domain.work.symbol
             case .sleep: Domain.sleep.symbol
             case .body: "figure.walk"
@@ -42,6 +44,7 @@ public struct RootView<Diagnostics: View>: View {
     let data: DataModel
     let diagnostics: Diagnostics
     @State private var calendar: CalendarModel
+    @State private var tasks: TasksModel
     @State private var workHistory: HistoryModel
     @State private var sleepHistory: HistoryModel
     @State private var bodyHistory: HistoryModel
@@ -58,6 +61,7 @@ public struct RootView<Diagnostics: View>: View {
         self.dictionary = dictionary
         self.data = data
         _calendar = State(initialValue: CalendarModel(store: today.store))
+        _tasks = State(initialValue: TasksModel(store: today.store, actions: today))
         _workHistory = State(initialValue: HistoryModel(store: today.store))
         _sleepHistory = State(initialValue: HistoryModel(store: today.store))
         _bodyHistory = State(initialValue: HistoryModel(store: today.store))
@@ -69,7 +73,7 @@ public struct RootView<Diagnostics: View>: View {
         NavigationSplitView {
             List(selection: selection) {
                 Section {
-                    ForEach([Screen.today, .calendar], id: \.self) { Label($0.title, systemImage: $0.symbol) }
+                    ForEach([Screen.today, .tasks, .calendar], id: \.self) { Label($0.title, systemImage: $0.symbol) }
                 }
                 Section("History") {
                     ForEach([Screen.work, .sleep, .body, .trends], id: \.self) { Label($0.title, systemImage: $0.symbol) }
@@ -83,6 +87,7 @@ public struct RootView<Diagnostics: View>: View {
             switch screen {
             case .today: TodayView(model: today)
             case .calendar: CalendarView(model: calendar)
+            case .tasks: TasksView(model: tasks)
             case .work: WorkView(model: workHistory)
             case .sleep: SleepView(model: sleepHistory)
             case .body: BodyView(model: bodyHistory)

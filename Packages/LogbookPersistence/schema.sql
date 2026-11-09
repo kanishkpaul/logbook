@@ -137,6 +137,72 @@ CREATE TABLE "metric_sample" (
   "deleted_at" TEXT
 ) STRICT;
 
+CREATE TABLE "plan_block" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "kind" TEXT NOT NULL,
+  "label" TEXT NOT NULL DEFAULT '',
+  "category_id" TEXT REFERENCES "category"("id") ON DELETE SET NULL,
+  "task_id" TEXT REFERENCES "task"("id") ON DELETE SET NULL,
+  "start_utc" TEXT NOT NULL,
+  "end_utc" TEXT NOT NULL,
+  "tz_identifier" TEXT NOT NULL,
+  "logical_day" TEXT NOT NULL,
+  "note" TEXT NOT NULL DEFAULT '',
+  "status" TEXT NOT NULL DEFAULT 'planned' CHECK ("status" IN ('planned', 'started', 'done', 'skipped')),
+  "template_id" TEXT REFERENCES "plan_template"("id") ON DELETE SET NULL,
+  "recurrence_rule" TEXT,
+  "source" TEXT NOT NULL DEFAULT 'manual',
+  "raw_text" TEXT,
+  "created_at" TEXT NOT NULL,
+  "updated_at" TEXT NOT NULL,
+  "deleted_at" TEXT,
+  CHECK (julianday("end_utc") >= julianday("start_utc"))
+) STRICT;
+
+CREATE TABLE "plan_template" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "name" TEXT NOT NULL,
+  "scope" TEXT NOT NULL DEFAULT 'day' CHECK ("scope" IN ('day', 'week')),
+  "blocks_json" TEXT NOT NULL DEFAULT '[]',
+  "created_at" TEXT NOT NULL,
+  "updated_at" TEXT NOT NULL,
+  "archived_at" TEXT
+) STRICT;
+
+CREATE TABLE "task" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "list_id" TEXT REFERENCES "task_list"("id") ON DELETE SET NULL,
+  "parent_task_id" TEXT REFERENCES "task"("id") ON DELETE CASCADE,
+  "title" TEXT NOT NULL,
+  "notes" TEXT NOT NULL DEFAULT '',
+  "priority" INTEGER NOT NULL DEFAULT 0,
+  "due_day" TEXT,
+  "scheduled_day" TEXT,
+  "is_someday" INTEGER NOT NULL DEFAULT 0,
+  "estimate_min" INTEGER,
+  "recurrence_rule" TEXT,
+  "status" TEXT NOT NULL DEFAULT 'open' CHECK ("status" IN ('open', 'done', 'dropped')),
+  "completed_at" TEXT,
+  "sort" INTEGER NOT NULL DEFAULT 0,
+  "source" TEXT NOT NULL DEFAULT 'manual',
+  "raw_text" TEXT,
+  "created_at" TEXT NOT NULL,
+  "updated_at" TEXT NOT NULL,
+  "deleted_at" TEXT
+) STRICT;
+
+CREATE TABLE "task_list" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "name" TEXT NOT NULL,
+  "color_hex" TEXT,
+  "symbol" TEXT,
+  "category_id" TEXT REFERENCES "category"("id") ON DELETE SET NULL,
+  "sort" INTEGER NOT NULL DEFAULT 0,
+  "created_at" TEXT NOT NULL,
+  "updated_at" TEXT NOT NULL,
+  "archived_at" TEXT
+) STRICT;
+
 CREATE TABLE "time_block" (
   "id" TEXT PRIMARY KEY NOT NULL,
   "kind" TEXT NOT NULL,
@@ -153,7 +219,7 @@ CREATE TABLE "time_block" (
   "raw_text" TEXT,
   "created_at" TEXT NOT NULL,
   "updated_at" TEXT NOT NULL,
-  "deleted_at" TEXT,
+  "deleted_at" TEXT, "task_id" TEXT REFERENCES "task"("id") ON DELETE SET NULL, "plan_block_id" TEXT REFERENCES "plan_block"("id") ON DELETE SET NULL,
   CHECK ("end_utc" IS NULL OR julianday("end_utc") >= julianday("start_utc"))
 ) STRICT;
 
@@ -164,6 +230,10 @@ CREATE INDEX "food_log_entry_logical_day" ON "food_log_entry"("logical_day");
 CREATE INDEX "meal_item_meal" ON "meal_item"("meal_id");
 
 CREATE INDEX "metric_sample_day" ON "metric_sample"("metric_id", "logical_day");
+
+CREATE INDEX "plan_block_logical_day" ON "plan_block"("logical_day");
+
+CREATE INDEX "task_open" ON "task"("status", "scheduled_day", "due_day");
 
 CREATE INDEX "time_block_logical_day" ON "time_block"("logical_day");
 
@@ -336,22 +406,58 @@ BEGIN
   VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'metric_sample', NEW."id", 'update', json_object('id', OLD."id", 'metric_id', OLD."metric_id", 'logical_day', OLD."logical_day", 'value', OLD."value", 'recorded_at', OLD."recorded_at", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), json_object('id', NEW."id", 'metric_id', NEW."metric_id", 'logical_day', NEW."logical_day", 'value', NEW."value", 'recorded_at', NEW."recorded_at", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
 END;
 
+CREATE TRIGGER "plan_block_change_log_delete" AFTER DELETE ON "plan_block"
+BEGIN
+  INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'plan_block', OLD."id", 'delete', json_object('id', OLD."id", 'kind', OLD."kind", 'label', OLD."label", 'category_id', OLD."category_id", 'task_id', OLD."task_id", 'start_utc', OLD."start_utc", 'end_utc', OLD."end_utc", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'note', OLD."note", 'status', OLD."status", 'template_id', OLD."template_id", 'recurrence_rule', OLD."recurrence_rule", 'source', OLD."source", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
+END;
+
+CREATE TRIGGER "plan_block_change_log_insert" AFTER INSERT ON "plan_block"
+BEGIN
+  INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'plan_block', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'kind', NEW."kind", 'label', NEW."label", 'category_id', NEW."category_id", 'task_id', NEW."task_id", 'start_utc', NEW."start_utc", 'end_utc', NEW."end_utc", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'note', NEW."note", 'status', NEW."status", 'template_id', NEW."template_id", 'recurrence_rule', NEW."recurrence_rule", 'source', NEW."source", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
+END;
+
+CREATE TRIGGER "plan_block_change_log_update" AFTER UPDATE ON "plan_block"
+BEGIN
+  INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'plan_block', NEW."id", 'update', json_object('id', OLD."id", 'kind', OLD."kind", 'label', OLD."label", 'category_id', OLD."category_id", 'task_id', OLD."task_id", 'start_utc', OLD."start_utc", 'end_utc', OLD."end_utc", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'note', OLD."note", 'status', OLD."status", 'template_id', OLD."template_id", 'recurrence_rule', OLD."recurrence_rule", 'source', OLD."source", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), json_object('id', NEW."id", 'kind', NEW."kind", 'label', NEW."label", 'category_id', NEW."category_id", 'task_id', NEW."task_id", 'start_utc', NEW."start_utc", 'end_utc', NEW."end_utc", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'note', NEW."note", 'status', NEW."status", 'template_id', NEW."template_id", 'recurrence_rule', NEW."recurrence_rule", 'source', NEW."source", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
+END;
+
+CREATE TRIGGER "task_change_log_delete" AFTER DELETE ON "task"
+BEGIN
+  INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'task', OLD."id", 'delete', json_object('id', OLD."id", 'list_id', OLD."list_id", 'parent_task_id', OLD."parent_task_id", 'title', OLD."title", 'notes', OLD."notes", 'priority', OLD."priority", 'due_day', OLD."due_day", 'scheduled_day', OLD."scheduled_day", 'is_someday', OLD."is_someday", 'estimate_min', OLD."estimate_min", 'recurrence_rule', OLD."recurrence_rule", 'status', OLD."status", 'completed_at', OLD."completed_at", 'sort', OLD."sort", 'source', OLD."source", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
+END;
+
+CREATE TRIGGER "task_change_log_insert" AFTER INSERT ON "task"
+BEGIN
+  INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'task', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'list_id', NEW."list_id", 'parent_task_id', NEW."parent_task_id", 'title', NEW."title", 'notes', NEW."notes", 'priority', NEW."priority", 'due_day', NEW."due_day", 'scheduled_day', NEW."scheduled_day", 'is_someday', NEW."is_someday", 'estimate_min', NEW."estimate_min", 'recurrence_rule', NEW."recurrence_rule", 'status', NEW."status", 'completed_at', NEW."completed_at", 'sort', NEW."sort", 'source', NEW."source", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
+END;
+
+CREATE TRIGGER "task_change_log_update" AFTER UPDATE ON "task"
+BEGIN
+  INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'task', NEW."id", 'update', json_object('id', OLD."id", 'list_id', OLD."list_id", 'parent_task_id', OLD."parent_task_id", 'title', OLD."title", 'notes', OLD."notes", 'priority', OLD."priority", 'due_day', OLD."due_day", 'scheduled_day', OLD."scheduled_day", 'is_someday', OLD."is_someday", 'estimate_min', OLD."estimate_min", 'recurrence_rule', OLD."recurrence_rule", 'status', OLD."status", 'completed_at', OLD."completed_at", 'sort', OLD."sort", 'source', OLD."source", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), json_object('id', NEW."id", 'list_id', NEW."list_id", 'parent_task_id', NEW."parent_task_id", 'title', NEW."title", 'notes', NEW."notes", 'priority', NEW."priority", 'due_day', NEW."due_day", 'scheduled_day', NEW."scheduled_day", 'is_someday', NEW."is_someday", 'estimate_min', NEW."estimate_min", 'recurrence_rule', NEW."recurrence_rule", 'status', NEW."status", 'completed_at', NEW."completed_at", 'sort', NEW."sort", 'source', NEW."source", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
+END;
+
 CREATE TRIGGER "time_block_change_log_delete" AFTER DELETE ON "time_block"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'time_block', OLD."id", 'delete', json_object('id', OLD."id", 'kind', OLD."kind", 'label', OLD."label", 'category_id', OLD."category_id", 'start_utc', OLD."start_utc", 'end_utc', OLD."end_utc", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'note', OLD."note", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'time_block', OLD."id", 'delete', json_object('id', OLD."id", 'kind', OLD."kind", 'label', OLD."label", 'category_id', OLD."category_id", 'start_utc', OLD."start_utc", 'end_utc', OLD."end_utc", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'note', OLD."note", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at", 'task_id', OLD."task_id", 'plan_block_id', OLD."plan_block_id"), NULL, strftime('%Y-%m-%d %H:%M:%f', 'now'));
 END;
 
 CREATE TRIGGER "time_block_change_log_insert" AFTER INSERT ON "time_block"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'time_block', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'kind', NEW."kind", 'label', NEW."label", 'category_id', NEW."category_id", 'start_utc', NEW."start_utc", 'end_utc', NEW."end_utc", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'note', NEW."note", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'time_block', NEW."id", 'insert', NULL, json_object('id', NEW."id", 'kind', NEW."kind", 'label', NEW."label", 'category_id', NEW."category_id", 'start_utc', NEW."start_utc", 'end_utc', NEW."end_utc", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'note', NEW."note", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at", 'task_id', NEW."task_id", 'plan_block_id', NEW."plan_block_id"), NEW."updated_at");
 END;
 
 CREATE TRIGGER "time_block_change_log_update" AFTER UPDATE ON "time_block"
 BEGIN
   INSERT INTO "change_log" ("id", "table_name", "row_id", "action", "before_json", "after_json", "changed_at")
-  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'time_block', NEW."id", 'update', json_object('id', OLD."id", 'kind', OLD."kind", 'label', OLD."label", 'category_id', OLD."category_id", 'start_utc', OLD."start_utc", 'end_utc', OLD."end_utc", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'note', OLD."note", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at"), json_object('id', NEW."id", 'kind', NEW."kind", 'label', NEW."label", 'category_id', NEW."category_id", 'start_utc', NEW."start_utc", 'end_utc', NEW."end_utc", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'note', NEW."note", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at"), NEW."updated_at");
+  VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))), 'time_block', NEW."id", 'update', json_object('id', OLD."id", 'kind', OLD."kind", 'label', OLD."label", 'category_id', OLD."category_id", 'start_utc', OLD."start_utc", 'end_utc', OLD."end_utc", 'tz_identifier', OLD."tz_identifier", 'logical_day', OLD."logical_day", 'note', OLD."note", 'is_estimate', OLD."is_estimate", 'source', OLD."source", 'import_batch_id', OLD."import_batch_id", 'raw_text', OLD."raw_text", 'created_at', OLD."created_at", 'updated_at', OLD."updated_at", 'deleted_at', OLD."deleted_at", 'task_id', OLD."task_id", 'plan_block_id', OLD."plan_block_id"), json_object('id', NEW."id", 'kind', NEW."kind", 'label', NEW."label", 'category_id', NEW."category_id", 'start_utc', NEW."start_utc", 'end_utc', NEW."end_utc", 'tz_identifier', NEW."tz_identifier", 'logical_day', NEW."logical_day", 'note', NEW."note", 'is_estimate', NEW."is_estimate", 'source', NEW."source", 'import_batch_id', NEW."import_batch_id", 'raw_text', NEW."raw_text", 'created_at', NEW."created_at", 'updated_at', NEW."updated_at", 'deleted_at', NEW."deleted_at", 'task_id', NEW."task_id", 'plan_block_id', NEW."plan_block_id"), NEW."updated_at");
 END;
 
 CREATE TRIGGER "time_block_one_running_per_kind_insert"

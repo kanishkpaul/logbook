@@ -24,6 +24,8 @@ public struct WeekState: Equatable {
         public var startMinute: Double
         public var endMinute: Double
         public var label: String
+        /// A planned block (drawn ghosted behind what happened).
+        public var isPlan: Bool = false
     }
 }
 
@@ -99,8 +101,16 @@ public struct CalendarPresenter {
                              startMinute: p.startMinute, endMinute: p.endMinute, label: b.label)
             }
         }
+        let planned = r.plans.filter { $0.status != .skipped }.flatMap { p -> [WeekState.Item] in
+            let domain = Domain(kind: p.kind) ?? .work
+            return DayPart.parts(start: p.startUTC, end: p.endUTC, in: timeZone).compactMap { part in
+                guard let column = labels[part.day] else { return nil }
+                return .init(id: "plan-\(p.id)-\(part.day)", column: column, domain: domain,
+                             startMinute: part.startMinute, endMinute: part.endMinute, label: p.label, isPlan: true)
+            }
+        }
         let title = "\(formatter("d MMM").string(from: noon(r.first))) – \(formatter("d MMM yyyy").string(from: noon(r.last)))"
-        return WeekState(days: columns, items: items, title: title)
+        return WeekState(days: columns, items: planned + items, title: title)
     }
 
     public func month(_ r: RangeSnapshot, today: LogicalDay) -> MonthState {

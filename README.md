@@ -13,7 +13,7 @@
 
 <br/>
 
-![Status](https://img.shields.io/badge/status-M5%20charts%20%26%20trends-BF5AF2?style=flat-square)
+![Status](https://img.shields.io/badge/status-M6%20plan-BF5AF2?style=flat-square)
 ![Platform](https://img.shields.io/badge/macOS-27-1D1D1F?style=flat-square&logo=apple&logoColor=white)
 ![Swift](https://img.shields.io/badge/Swift-6.4-F05138?style=flat-square&logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-5E5CE6?style=flat-square)
@@ -202,7 +202,7 @@ logbook/
 | 🟡 | **M3 · Daily driver** | Built: Today, Quick Entry (⌥Space), timers, menu bar, Close the day, food dictionary with macros + nicotine. Next: use it daily and retire Notes |
 | ⬜️ | **M4 · Food** | Library, favourites, meals, caffeine curve, protein tracking |
 | 🟡 | **M5 · Charts & trends** | Built: Calendar (day/week/month of what happened), Work (by label, deep work), Sleep (duration, windows, regularity), Body, Trends (any metric, metric vs metric with careful wording) |
-| ⬜️ | **M6 · Plan** | To-do lists, time-blocking calendar, templates, plan vs actual, Apple Calendar overlay |
+| 🟡 | **M6 · Plan** | Built: tasks (smart views, lists, estimates vs actual, repeats), plan blocks ghosted behind what happened, Up next with Start / Done as planned / Skip, templates and plan tomorrow. Waiting on decisions #8 (import existing to-dos) and #9 (Apple Calendar overlay) |
 | ⬜️ | **M7 · Proactive** | Insight engine, capped notifications, weekly review |
 | ⬜️ | **M8 · Polish** | Design pass, motion, icon, keyboard, accessibility, backups |
 | ⬜️ | **M9 · AI recap** | On-device daily and weekly prose with template fallback |

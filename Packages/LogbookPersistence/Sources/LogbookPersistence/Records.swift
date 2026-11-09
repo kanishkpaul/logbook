@@ -50,6 +50,8 @@ public struct TimeBlock: Hashable, Identifiable, Sendable {
     @Column("created_at") public var createdAt: Date
     @Column("updated_at") public var updatedAt: Date
     @Column("deleted_at") public var deletedAt: Date?
+    @Column("task_id") public var taskID: TodoTask.ID?
+    @Column("plan_block_id") public var planBlockID: PlanBlock.ID?
 
     public var isRunning: Bool { endUTC == nil }
 }
@@ -203,6 +205,103 @@ public struct MealItem: Hashable, Identifiable, Sendable {
     public var quantity: Double?
     public var unit: String?
     public var sort: Int = 0
+}
+
+@Table("task_list")
+public struct TaskList: Hashable, Identifiable, Sendable {
+    public let id: UUID
+    public var name: String
+    @Column("color_hex") public var colorHex: String?
+    public var symbol: String?
+    @Column("category_id") public var categoryID: Category.ID?
+    public var sort: Int = 0
+    @Column("created_at") public var createdAt: Date
+    @Column("updated_at") public var updatedAt: Date
+    @Column("archived_at") public var archivedAt: Date?
+}
+
+public enum TaskStatus: String, Sendable, QueryBindable, CaseIterable {
+    case open, done, dropped
+}
+
+/// A to-do. (Named `TodoTask` to keep clear of Swift's `Task`.)
+@Table("task")
+public struct TodoTask: Hashable, Identifiable, Sendable {
+    public let id: UUID
+    @Column("list_id") public var listID: TaskList.ID?
+    @Column("parent_task_id") public var parentTaskID: TodoTask.ID?
+    public var title: String
+    public var notes: String = ""
+    /// 0 none, 1 `!`, 2 `!!`.
+    public var priority: Int = 0
+    @Column("due_day") public var dueDay: LogicalDay?
+    @Column("scheduled_day") public var scheduledDay: LogicalDay?
+    @Column("is_someday") public var isSomeday: Bool = false
+    @Column("estimate_min") public var estimateMin: Int?
+    @Column("recurrence_rule") public var recurrenceRule: String?
+    public var status: TaskStatus = .open
+    @Column("completed_at") public var completedAt: Date?
+    public var sort: Int = 0
+    public var source: Source = .manual
+    @Column("raw_text") public var rawText: String?
+    @Column("created_at") public var createdAt: Date
+    @Column("updated_at") public var updatedAt: Date
+    @Column("deleted_at") public var deletedAt: Date?
+
+    public var recurrence: Recurrence? { recurrenceRule.flatMap { Recurrence(rule: $0) } }
+}
+
+public enum PlanStatus: String, Sendable, QueryBindable, CaseIterable {
+    case planned, started, done, skipped
+}
+
+/// A block you planned. Never merged with `TimeBlock` (what happened).
+@Table("plan_block")
+public struct PlanBlock: Hashable, Identifiable, Sendable {
+    public let id: UUID
+    public var kind: BlockKind
+    public var label: String = ""
+    @Column("category_id") public var categoryID: Category.ID?
+    @Column("task_id") public var taskID: TodoTask.ID?
+    @Column("start_utc") public var startUTC: Date
+    @Column("end_utc") public var endUTC: Date
+    @Column("tz_identifier") public var tzIdentifier: String
+    @Column("logical_day") public var logicalDay: LogicalDay
+    public var note: String = ""
+    public var status: PlanStatus = .planned
+    @Column("template_id") public var templateID: PlanTemplate.ID?
+    @Column("recurrence_rule") public var recurrenceRule: String?
+    public var source: Source = .manual
+    @Column("raw_text") public var rawText: String?
+    @Column("created_at") public var createdAt: Date
+    @Column("updated_at") public var updatedAt: Date
+    @Column("deleted_at") public var deletedAt: Date?
+
+    public var minutes: Int { Durations.minutes(from: startUTC, to: endUTC) }
+}
+
+/// A saved "ideal day": blocks as minutes from midnight (end may pass 1440).
+@Table("plan_template")
+public struct PlanTemplate: Hashable, Identifiable, Sendable {
+    public let id: UUID
+    public var name: String
+    public var scope: String = "day"
+    @Column("blocks_json") public var blocksJSON: String = "[]"
+    @Column("created_at") public var createdAt: Date
+    @Column("updated_at") public var updatedAt: Date
+    @Column("archived_at") public var archivedAt: Date?
+
+    public struct Block: Codable, Hashable, Sendable {
+        public var kind: String
+        public var label: String
+        public var startMinute: Int
+        public var endMinute: Int
+    }
+
+    public var blocks: [Block] {
+        get { (try? JSONDecoder().decode([Block].self, from: Data(blocksJSON.utf8))) ?? [] }
+        set { blocksJSON = (try? String(data: JSONEncoder().encode(newValue), encoding: .utf8)) ?? "[]" }
+    }
 }
 
 @Table("change_log")

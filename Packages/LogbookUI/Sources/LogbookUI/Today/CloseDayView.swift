@@ -10,6 +10,7 @@ public struct CloseDayView: View {
     @State private var burn = ""
     @State private var steps = ""
     @State private var values: [UUID: String] = [:]
+    @State private var templateName = ""
 
     public init(model: TodayModel) {
         self.model = model
@@ -56,6 +57,51 @@ public struct CloseDayView: View {
                             Text("Same shorthand as everywhere: `350 / 14 / 0`, tags like `40c 12f 1.2nic`, `~` for estimates.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
+                    }
+                    if !close.unreviewedPlans.isEmpty {
+                        Section("Planned blocks") {
+                            ForEach(close.unreviewedPlans) { p in
+                                LabeledContent("\(p.title) · \(p.times)") {
+                                    HStack {
+                                        Button("Done as planned") { model.doneAsPlanned(p.id) }
+                                        Button("Skipped") { model.skipPlanned(p.id) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if !close.unfinishedTasks.isEmpty {
+                        Section("Unfinished tasks") {
+                            ForEach(close.unfinishedTasks) { t in
+                                LabeledContent(t.title) {
+                                    HStack {
+                                        Button("Tomorrow") { model.moveToTomorrow(t.id) }
+                                        Button("Someday") { model.somedayTask(t.id) }
+                                        Button("Drop") { model.dropTask(t.id) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Section("Plan tomorrow") {
+                        let templates = model.templates
+                        if templates.isEmpty {
+                            Text("No templates yet. Plan a good day, then save it here as one.").foregroundStyle(.secondary)
+                        }
+                        ForEach(templates, id: \.id) { t in
+                            LabeledContent(t.name) {
+                                Button("Stamp onto tomorrow") { model.stampTomorrow(t.id) }
+                            }
+                        }
+                        HStack {
+                            TextField("Save today's plan as…", text: $templateName)
+                            Button("Save") {
+                                model.saveTemplate(named: templateName)
+                                templateName = ""
+                            }
+                            .disabled(templateName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                        Text("Or type “plan tomorrow 1000-1300 deep work” in Quick Entry.").font(.caption).foregroundStyle(.secondary)
                     }
                     Section("Today") {
                         ForEach(close.summary, id: \.self) { Text($0) }

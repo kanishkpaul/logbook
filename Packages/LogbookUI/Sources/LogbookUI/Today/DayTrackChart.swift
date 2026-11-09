@@ -9,12 +9,23 @@ struct DayTrackChart: View {
 
     var body: some View {
         Chart {
+            // The plan, ghosted behind what happened.
+            ForEach(state.plan.ghosts) { item in
+                RectangleMark(
+                    xStart: .value("Start", item.start),
+                    xEnd: .value("End", item.end),
+                    y: .value("Lane", item.lane),
+                    height: .ratio(0.95)
+                )
+                .foregroundStyle(item.domain.color.opacity(0.18))
+                .cornerRadius(4)
+            }
             ForEach(state.track) { item in
                 RectangleMark(
                     xStart: .value("Start", item.start),
                     xEnd: .value("End", item.end),
                     y: .value("Lane", item.lane),
-                    height: .ratio(0.7)
+                    height: .ratio(0.6)
                 )
                 .foregroundStyle(item.domain.color.opacity(item.isRunning ? 0.55 : 0.85))
                 .cornerRadius(4)
@@ -41,7 +52,7 @@ struct DayTrackChart: View {
         }
         .chartLegend(.hidden)
         .frame(height: 150)
-        .accessibilityLabel("24-hour track of sleep, work, nature's call and food")
+        .accessibilityLabel("24-hour track of sleep, work, nature's call and food, with the plan drawn faintly behind")
     }
 }
 

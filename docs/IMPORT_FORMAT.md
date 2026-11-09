@@ -71,6 +71,9 @@ After the last ` - ` on a food line (or after `$`):
 | `meal breakfast = coffee + 2 eggs + toast 2 slices` | saves a meal (every item must be in the dictionary); redefining replaces it |
 | `breakfast` · `breakfast x2` | logs every item of the meal |
 | `2 eggs` · `egg x2` | counts; `eggs` and `egg` match the same dictionary entry |
+| `t write SIH deck ~45m !! fri #horizon` | a task: `~` estimate, `!`/`!!` priority, a day or date = due, `@day` = scheduled, `@someday`, `#list` |
+| `t standup every weekday` · `t gym every mon,wed,fri` · `t water plants after 3 days` | repeating tasks (the next one appears when you complete it) |
+| `plan 1400-1600 deep work` · `plan tomorrow gym 1800-1900` · `plan sleep 0100-0900` | a planned block (kinds: work, sleep, nc, break, gym; sleep after midnight means the coming night) |
 
 Typing a food with values and a count (`egg x2 - 140 / 12 / 0`) stores **one** egg (70 kcal) in the dictionary.
 

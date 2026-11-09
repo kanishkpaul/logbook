@@ -21,6 +21,10 @@ public struct TodayView: View {
                         ForEach(state.heroes) { HeroCard(hero: $0) }
                     }
 
+                    GroupBox("Plan") {
+                        PlanPanel(model: model, plan: state.plan).padding(4)
+                    }
+
                     GroupBox("Timers") {
                         TimersBar(model: model).padding(4)
                     }

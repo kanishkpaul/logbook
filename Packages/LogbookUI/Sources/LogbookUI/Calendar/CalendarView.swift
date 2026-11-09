@@ -4,7 +4,7 @@ import LogbookPersistence
 import Observation
 import SwiftUI
 
-/// Day / week / month views of what actually happened (the plan layer comes in M6).
+/// Day / week / month views: what happened, with the plan ghosted behind it.
 @Observable
 public final class CalendarModel {
     public enum Mode: String, CaseIterable, Identifiable {
@@ -193,9 +193,9 @@ struct WeekGrid: View {
                     // Negative minutes put 00:00 at the top and 24:00 at the bottom.
                     yStart: .value("Start", -item.startMinute),
                     yEnd: .value("End", -item.endMinute),
-                    width: .ratio(0.85)
+                    width: .ratio(item.isPlan ? 0.95 : 0.7)
                 )
-                .foregroundStyle(item.domain.color.opacity(0.8))
+                .foregroundStyle(item.domain.color.opacity(item.isPlan ? 0.18 : 0.8))
                 .cornerRadius(4)
             }
             .chartXScale(domain: week.days.map(\.label))

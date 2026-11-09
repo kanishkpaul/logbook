@@ -21,6 +21,7 @@ public enum Schema {
         migrator.registerMigration("v2: food import batch", migrate: v2FoodImportBatch)
         migrator.registerMigration("v3: macros and nicotine", migrate: v3MacrosAndNicotine)
         migrator.registerMigration("v4: meals", migrate: v4Meals)
+        migrator.registerMigration("v5: plan", migrate: v5Plan)
         return migrator
     }
 
@@ -438,15 +439,100 @@ public enum Schema {
             """)
     }
 
+    // MARK: v5
+
+    /// To-dos and time blocking. Plan (`plan_block`) and reality (`time_block`)
+    /// stay separate rows; `time_block.task_id` / `plan_block_id` link them.
+    static func v5Plan(_ db: Database) throws {
+        try db.execute(sql: """
+            CREATE TABLE "task_list" (
+              "id" TEXT PRIMARY KEY NOT NULL,
+              "name" TEXT NOT NULL,
+              "color_hex" TEXT,
+              "symbol" TEXT,
+              "category_id" TEXT REFERENCES "category"("id") ON DELETE SET NULL,
+              "sort" INTEGER NOT NULL DEFAULT 0,
+              "created_at" TEXT NOT NULL,
+              "updated_at" TEXT NOT NULL,
+              "archived_at" TEXT
+            ) STRICT;
+
+            CREATE TABLE "task" (
+              "id" TEXT PRIMARY KEY NOT NULL,
+              "list_id" TEXT REFERENCES "task_list"("id") ON DELETE SET NULL,
+              "parent_task_id" TEXT REFERENCES "task"("id") ON DELETE CASCADE,
+              "title" TEXT NOT NULL,
+              "notes" TEXT NOT NULL DEFAULT '',
+              "priority" INTEGER NOT NULL DEFAULT 0,
+              "due_day" TEXT,
+              "scheduled_day" TEXT,
+              "is_someday" INTEGER NOT NULL DEFAULT 0,
+              "estimate_min" INTEGER,
+              "recurrence_rule" TEXT,
+              "status" TEXT NOT NULL DEFAULT 'open' CHECK ("status" IN ('open', 'done', 'dropped')),
+              "completed_at" TEXT,
+              "sort" INTEGER NOT NULL DEFAULT 0,
+              "source" TEXT NOT NULL DEFAULT 'manual',
+              "raw_text" TEXT,
+              "created_at" TEXT NOT NULL,
+              "updated_at" TEXT NOT NULL,
+              "deleted_at" TEXT
+            ) STRICT;
+            CREATE INDEX "task_open" ON "task"("status", "scheduled_day", "due_day");
+
+            CREATE TABLE "plan_template" (
+              "id" TEXT PRIMARY KEY NOT NULL,
+              "name" TEXT NOT NULL,
+              "scope" TEXT NOT NULL DEFAULT 'day' CHECK ("scope" IN ('day', 'week')),
+              "blocks_json" TEXT NOT NULL DEFAULT '[]',
+              "created_at" TEXT NOT NULL,
+              "updated_at" TEXT NOT NULL,
+              "archived_at" TEXT
+            ) STRICT;
+
+            CREATE TABLE "plan_block" (
+              "id" TEXT PRIMARY KEY NOT NULL,
+              "kind" TEXT NOT NULL,
+              "label" TEXT NOT NULL DEFAULT '',
+              "category_id" TEXT REFERENCES "category"("id") ON DELETE SET NULL,
+              "task_id" TEXT REFERENCES "task"("id") ON DELETE SET NULL,
+              "start_utc" TEXT NOT NULL,
+              "end_utc" TEXT NOT NULL,
+              "tz_identifier" TEXT NOT NULL,
+              "logical_day" TEXT NOT NULL,
+              "note" TEXT NOT NULL DEFAULT '',
+              "status" TEXT NOT NULL DEFAULT 'planned' CHECK ("status" IN ('planned', 'started', 'done', 'skipped')),
+              "template_id" TEXT REFERENCES "plan_template"("id") ON DELETE SET NULL,
+              "recurrence_rule" TEXT,
+              "source" TEXT NOT NULL DEFAULT 'manual',
+              "raw_text" TEXT,
+              "created_at" TEXT NOT NULL,
+              "updated_at" TEXT NOT NULL,
+              "deleted_at" TEXT,
+              CHECK (julianday("end_utc") >= julianday("start_utc"))
+            ) STRICT;
+            CREATE INDEX "plan_block_logical_day" ON "plan_block"("logical_day");
+
+            ALTER TABLE "time_block" ADD COLUMN "task_id" TEXT REFERENCES "task"("id") ON DELETE SET NULL;
+            ALTER TABLE "time_block" ADD COLUMN "plan_block_id" TEXT REFERENCES "plan_block"("id") ON DELETE SET NULL;
+            """)
+        for table in ["time_block", "task", "plan_block"] {
+            try installChangeLogTriggers(db, table: table)
+        }
+    }
+
     // MARK: Change log
 
     /// Tables whose every insert/update/delete is recorded in `change_log` with
     /// before/after JSON. If a later migration alters one of these tables, it
     /// must call `installChangeLogTriggers` again so new columns are captured.
-    public static let auditedTables = ["time_block", "food_log_entry", "metric_sample", "food", "category"]
+    /// (Documentation only: migrations name their tables explicitly, because a
+    /// shipped migration must never change.)
+    public static let auditedTables = ["time_block", "food_log_entry", "metric_sample", "food", "category", "task", "plan_block"]
 
     static func v1ChangeLog(_ db: Database) throws {
-        for table in auditedTables {
+        // Frozen: the tables that existed in v1. Later migrations install their own.
+        for table in ["time_block", "food_log_entry", "metric_sample", "food", "category"] {
             try installChangeLogTriggers(db, table: table)
         }
     }
@@ -456,6 +542,8 @@ public enum Schema {
     /// `changed_at` comes from the row's own `updated_at`, which the write path
     /// sets from the injected clock; hard deletes (import undo) use SQLite's clock.
     public static func installChangeLogTriggers(_ db: Database, table: String) throws {
+        // Tables created earlier in the same migration may not be in GRDB's cache yet.
+        db.clearSchemaCache()
         let columns = try db.columns(in: table).map(\.name)
         func json(_ alias: String) -> String {
             "json_object(" + columns.map { "'\($0)', \(alias).\"\($0)\"" }.joined(separator: ", ") + ")"

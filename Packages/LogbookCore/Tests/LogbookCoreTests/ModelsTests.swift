@@ -119,3 +119,17 @@ import Testing
         #expect(SleepTiming.bedtime(endingDay: day, onset: -60, in: tz) == at(9, 23, 0))
     }
 }
+
+@Suite struct IntervalsTests {
+    let t0 = Date(timeIntervalSince1970: 0)
+    func i(_ a: Double, _ b: Double) -> DateInterval { DateInterval(start: t0.addingTimeInterval(a * 3600), end: t0.addingTimeInterval(b * 3600)) }
+
+    @Test func overlapCountsSharedTimeOnce() {
+        // Planned 10–13 and 14–16; did 10:30–12 and 11–12:30 (overlapping), 15–17.
+        let planned = [i(10, 13), i(14, 16)]
+        let actual = [i(10.5, 12), i(11, 12.5), i(15, 17)]
+        #expect(Intervals.overlap(planned, actual) == 3 * 3600)
+        #expect(Intervals.total(actual) == 4 * 3600)
+        #expect(Intervals.union(actual) == [i(10.5, 12.5), i(15, 17)])
+    }
+}

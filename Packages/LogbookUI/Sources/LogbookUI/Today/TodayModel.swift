@@ -150,6 +150,35 @@ public final class TodayModel {
         run { try store.recordMetric(key: key, value: value, day: currentDay) }
     }
 
+    // MARK: Tasks and plan
+
+    public func completeTask(_ id: UUID) { run { try store.completeTask(id: id) } }
+    public func reopenTask(_ id: UUID) { run { try store.reopenTask(id: id) } }
+    public func dropTask(_ id: UUID) { run { try store.dropTask(id: id) } }
+    public func deleteTask(_ id: UUID) { run { try store.deleteTask(id: id) } }
+    public func startTask(_ id: UUID) { run { try store.startTask(id: id) } }
+    public func moveTask(_ id: UUID, to day: LogicalDay?) { run { try store.scheduleTask(id: id, day: day) } }
+    public func somedayTask(_ id: UUID) { run { try store.scheduleTask(id: id, day: nil, someday: true) } }
+    public func moveToTomorrow(_ id: UUID) { moveTask(id, to: currentDay.next) }
+
+    public func startPlanned(_ id: UUID) { run { try store.startPlanned(id: id) } }
+    public func doneAsPlanned(_ id: UUID) { run { try store.completeAsPlanned(id: id) } }
+    public func skipPlanned(_ id: UUID) { run { try store.setPlanStatus(id: id, .skipped) } }
+    public func deletePlanned(_ id: UUID) { run { try store.deletePlanBlock(id: id) } }
+
+    public var templates: [PlanTemplate] { (try? store.templates()) ?? [] }
+
+    public func saveTemplate(named name: String) {
+        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        run { try store.saveTemplate(name: name, from: snapshot?.day ?? currentDay) }
+    }
+
+    /// Stamps a template onto tomorrow ("plan tomorrow").
+    public func stampTomorrow(_ templateID: UUID) {
+        run { try store.stamp(templateID: templateID, on: (snapshot?.day ?? currentDay).next) }
+        lastConfirmation = "Planned tomorrow"
+    }
+
     /// Live preview for Quick Entry text.
     public func interpret(_ text: String) -> QuickEntry.Interpretation? {
         try? quickEntry.interpret(text)

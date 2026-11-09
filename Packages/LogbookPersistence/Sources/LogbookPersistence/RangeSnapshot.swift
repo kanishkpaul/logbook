@@ -12,6 +12,8 @@ public struct RangeSnapshot: Sendable, Equatable {
     public var window: DateInterval
     public var facts: [DailyFacts]
     public var blocks: [TimeBlock]
+    /// Planned blocks overlapping the range.
+    public var plans: [PlanBlock] = []
 
     public var days: [LogicalDay] { facts.map(\.logicalDay) }
 }
@@ -50,8 +52,12 @@ extension LogStore {
             .where { #sql("(\($0.endUTC) IS NOT NULL AND \($0.endUTC) > \(start))", as: Bool.self) }
             .order(by: \.startUTC)
             .fetchAll(db)
+        let plans = try PlanBlock
+            .where { $0.deletedAt.is(nil) && $0.startUTC < end && $0.endUTC > start }
+            .order(by: \.startUTC)
+            .fetchAll(db)
         return RangeSnapshot(first: first, last: last, window: window,
                              facts: LogicalDay.range(first, through: last).map { byDay[$0] ?? .empty($0) },
-                             blocks: blocks)
+                             blocks: blocks, plans: plans)
     }
 }

@@ -70,6 +70,7 @@ public enum DataExport {
     /// Parents before children, so a restore satisfies foreign keys.
     static let restoreOrder = [
         "import_batch", "category", "food", "metric_definition", "meal", "meal_item",
+        "task_list", "task", "plan_template", "plan_block",
         "time_block", "food_log_entry", "metric_sample", "goal", "insight_memory", "change_log",
     ]
 

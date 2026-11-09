@@ -40,6 +40,10 @@ struct RenderViewsTests {
                 ForEach(state.heroes) { HeroCard(hero: $0) }
             }
         }.padding(), "today-top", width: 860)
+        try render(VStack(alignment: .leading, spacing: 16) {
+            PlanPanel(model: model, plan: state.plan)
+            DayTrackChart(state: state)
+        }.padding(), "today-plan", width: 860)
         try render(CloseDayView(model: model), "close-day", width: 520)
         try render(MenuBarPanel(model: model, openMain: {}, quit: {}), "menu-bar-panel", width: 460)
         try render(QuickEntryField(model: model, text: "paneer 200g - 530 / 36 / 0 / 0 / 2.4c / 40f").padding(), "quick-entry-new-food", width: 620)
