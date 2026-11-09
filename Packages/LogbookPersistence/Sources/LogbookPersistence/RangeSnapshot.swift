@@ -14,6 +14,9 @@ public struct RangeSnapshot: Sendable, Equatable {
     public var blocks: [TimeBlock]
     /// Planned blocks overlapping the range.
     public var plans: [PlanBlock] = []
+    /// Your custom metrics (active ones) and their per-day values.
+    public var customDefinitions: [MetricDefinition] = []
+    public var custom: [String: [LogicalDay: Double]] = [:]
 
     public var days: [LogicalDay] { facts.map(\.logicalDay) }
 }
@@ -56,8 +59,10 @@ extension LogStore {
             .where { $0.deletedAt.is(nil) && $0.startUTC < end && $0.endUTC > start }
             .order(by: \.startUTC)
             .fetchAll(db)
+        let definitions = try MetricDefinition.where { !$0.isBuiltin && $0.archivedAt.is(nil) }.order { $0.name.collate(.nocase) }.fetchAll(db)
         return RangeSnapshot(first: first, last: last, window: window,
                              facts: LogicalDay.range(first, through: last).map { byDay[$0] ?? .empty($0) },
-                             blocks: blocks, plans: plans)
+                             blocks: blocks, plans: plans, customDefinitions: definitions,
+                             custom: try customValues(db, first: first, last: last))
     }
 }

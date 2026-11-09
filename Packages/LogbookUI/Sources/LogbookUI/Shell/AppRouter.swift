@@ -3,7 +3,7 @@ import Observation
 
 /// Every screen in the sidebar.
 public enum RootScreen: String, Hashable, CaseIterable, Sendable {
-    case today, tasks, calendar, review, work, sleep, body, trends, dictionary, importing, data, diagnostics
+    case today, tasks, calendar, review, work, sleep, body, trends, dictionary, importing, data, diagnostics, metrics
 
     public var title: String {
         switch self {
@@ -19,6 +19,7 @@ public enum RootScreen: String, Hashable, CaseIterable, Sendable {
         case .importing: "Import"
         case .data: "Backups & Export"
         case .diagnostics: "Diagnostics"
+        case .metrics: "Metrics"
         }
     }
 
@@ -36,6 +37,7 @@ public enum RootScreen: String, Hashable, CaseIterable, Sendable {
         case .importing: "square.and.arrow.down"
         case .data: "externaldrive"
         case .diagnostics: "stethoscope"
+        case .metrics: "slider.horizontal.3"
         }
     }
 

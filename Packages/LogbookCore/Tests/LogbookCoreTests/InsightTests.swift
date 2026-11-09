@@ -211,3 +211,14 @@ struct Scenario {
         }
     }
 }
+
+@Suite struct CustomMetricInsightTests {
+    @Test func unusualDayUsesYourMetricName() {
+        var s = Scenario()
+        s.set("custom.weight") { i in i == 58 ? 76 : 71 + Double(i % 3) * 0.2 }
+        let c = InsightContext(today: Scenario.today, now: s.now, timeZone: Scenario.tz, days: s.days, metrics: s.metrics,
+                               metricNames: ["custom.weight": "Weight (kg)"], lastCaffeine: s.lastCaffeine,
+                               anyLogged: s.anyLogged, sleepStarts: [], plan: PlanFacts())
+        #expect(BaselineDeviationDetector().evaluate(c).first?.title.hasPrefix("Weight (kg) yesterday was") == true)
+    }
+}

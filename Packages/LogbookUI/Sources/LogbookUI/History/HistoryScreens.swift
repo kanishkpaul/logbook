@@ -50,6 +50,9 @@ public struct BodyView: View {
             Text("Net kcal is intake minus logged burn, not total energy balance.").font(.caption).foregroundStyle(.secondary)
             MetricChart(series: p.series(Metrics.ncCount, r), height: 120)
             MetricChart(series: p.series(Metrics.ncMinutes, r), height: 120)
+            ForEach(r.customDefinitions, id: \.id) { def in
+                MetricChart(series: p.series(Metrics.spec(for: def), r), height: 150)
+            }
             Text("Nature's call charts are descriptive only. For anything health-related, a clinician is the right person to ask.")
                 .font(.caption).foregroundStyle(.secondary)
         }
@@ -70,26 +73,27 @@ public struct TrendsView: View {
 
     public var body: some View {
         HistoryScaffold(title: "Trends", model: model) { r, p in
+            let specs = Metrics.all + r.customDefinitions.map(Metrics.spec(for:))
             Picker("Metric", selection: $metric) {
-                ForEach(Metrics.all) { Text($0.title).tag($0.id) }
+                ForEach(specs) { Text($0.title).tag($0.id) }
             }
             .frame(width: 260)
-            MetricChart(series: p.series(Metrics.spec(metric), r))
+            MetricChart(series: p.series(Metrics.spec(metric, custom: r.customDefinitions), r))
 
             Divider()
             Text("Compare").font(.headline)
             HStack {
                 Picker("On days with more", selection: $xMetric) {
-                    ForEach(Metrics.all) { Text($0.title).tag($0.id) }
+                    ForEach(specs) { Text($0.title).tag($0.id) }
                 }
                 Picker("how was", selection: $yMetric) {
-                    ForEach(Metrics.all) { Text($0.title).tag($0.id) }
+                    ForEach(specs) { Text($0.title).tag($0.id) }
                 }
                 Toggle("the next day", isOn: $nextDay)
             }
             .frame(maxWidth: 700)
-            ComparisonChart(x: Metrics.spec(xMetric), y: Metrics.spec(yMetric), nextDay: nextDay,
-                            state: p.compare(Metrics.spec(xMetric), Metrics.spec(yMetric), r, nextDay: nextDay))
+            let xs = Metrics.spec(xMetric, custom: r.customDefinitions), ys = Metrics.spec(yMetric, custom: r.customDefinitions)
+            ComparisonChart(x: xs, y: ys, nextDay: nextDay, state: p.compare(xs, ys, r, nextDay: nextDay))
         }
     }
 }

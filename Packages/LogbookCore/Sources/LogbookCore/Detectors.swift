@@ -35,7 +35,7 @@ public struct BaselineDeviationDetector: InsightDetector {
 
     public func evaluate(_ c: InsightContext) -> [Insight] {
         guard let y = c.yesterdayIndex, y >= 3 else { return [] }
-        return metrics.compactMap { key in
+        return (metrics + c.metricNames.keys.sorted()).compactMap { key in
             let s = c.series(key)
             guard let x = s[y] else { return nil }
             let baseline = s[max(0, y - 30)..<(y - 2)].compactMap { $0 }.suffix(28)
@@ -47,7 +47,7 @@ public struct BaselineDeviationDetector: InsightDetector {
             let range = Stats.typicalRange(Array(baseline).map { Optional($0) })
             return Insight(
                 detectorID: id, detectorVersion: version, subjectKey: key, kind: .anomaly,
-                title: "\(Fmt.name(key)) yesterday was \(Fmt.value(key, abs(x - median))) \(x > median ? "above" : "below") your usual (\(Fmt.value(key, median)))",
+                title: "\(c.metricNames[key] ?? Fmt.name(key)) yesterday was \(Fmt.value(key, abs(x - median))) \(x > median ? "above" : "below") your usual (\(Fmt.value(key, median)))",
                 explanation: [
                     "Compared with your last \(baseline.count) logged days\(range.map { ", where the middle half ran \(Fmt.value(key, $0.low))–\(Fmt.value(key, $0.high))" } ?? "").",
                     repeated ? "Shown because it is the second unusual day in the last three (robust z \(String(format: "%.1f", z)))."

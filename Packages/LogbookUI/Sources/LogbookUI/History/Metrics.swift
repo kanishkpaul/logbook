@@ -10,6 +10,8 @@ public struct MetricSpec: Identifiable, Hashable, Sendable {
     public let domain: Domain
     let value: @Sendable (DailyFacts) -> Double?
     let formatter: @Sendable (Double) -> String
+    /// For your own metrics: the definition key; values come from the range's custom map.
+    public var customKey: String?
 
     public func value(_ f: DailyFacts) -> Double? { value(f) }
     /// Minutes, shown as durations; axes tick on whole hours.
@@ -43,7 +45,18 @@ public enum Metrics {
 
     public static let all = [work, sleep, kcal, protein, carbs, fat, caffeine, nicotine, burn, steps, net, ncCount, ncMinutes]
 
-    public static func spec(_ id: String) -> MetricSpec { all.first { $0.id == id } ?? work }
+    public static func spec(_ id: String, custom: [MetricDefinition] = []) -> MetricSpec {
+        all.first { $0.id == id } ?? custom.map(spec(for:)).first { $0.id == id } ?? work
+    }
+
+    /// A chartable spec for one of your own metrics.
+    public static func spec(for def: MetricDefinition) -> MetricSpec {
+        let unit = def.unit
+        return MetricSpec(id: "custom.\(def.key)", title: unit.isEmpty ? def.name : "\(def.name) (\(unit))", unit: unit,
+                          domain: .other, value: { _ in nil },
+                          formatter: { v in unit.isEmpty ? NutritionFormat.number(v) : "\(NutritionFormat.number(v)) \(unit)" },
+                          customKey: def.key)
+    }
 }
 
 /// Ranges offered on history screens.

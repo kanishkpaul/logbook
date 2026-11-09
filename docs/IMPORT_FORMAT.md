@@ -73,6 +73,7 @@ After the last ` - ` on a food line (or after `$`):
 | `2 eggs` · `egg x2` | counts; `eggs` and `egg` match the same dictionary entry |
 | `t write SIH deck ~45m !! fri #horizon` | a task: `~` estimate, `!`/`!!` priority, a day or date = due, `@day` = scheduled, `@someday`, `#list` |
 | `t standup every weekday` · `t gym every mon,wed,fri` · `t water plants after 3 days` | repeating tasks (the next one appears when you complete it) |
+| `weight 71.2` · `mood: 4` · `water 500` | one of your own metrics (define it first under Library › Metrics) |
 | `plan 1400-1600 deep work` · `plan tomorrow gym 1800-1900` · `plan sleep 0100-0900` | a planned block (kinds: work, sleep, nc, break, gym; sleep after midnight means the coming night) |
 
 Typing a food with values and a count (`egg x2 - 140 / 12 / 0`) stores **one** egg (70 kcal) in the dictionary.

@@ -44,7 +44,7 @@ public struct RootView<Diagnostics: View>: View {
             List(selection: selection) {
                 section(nil, [.today, .tasks, .calendar])
                 section("History", [.review, .work, .sleep, .body, .trends])
-                section("Library", [.dictionary, .importing, .data, .diagnostics])
+                section("Library", [.dictionary, .metrics, .importing, .data, .diagnostics])
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 200)
         } detail: {
@@ -61,6 +61,7 @@ public struct RootView<Diagnostics: View>: View {
             case .importing: ImportView(store: today.store)
             case .data: DataView(model: data)
             case .diagnostics: diagnostics
+            case .metrics: MetricsView(store: today.store)
             }
         }
         .frame(minWidth: 960, minHeight: 680)

@@ -9,8 +9,11 @@ public struct InsightContext: Sendable {
     public var now: Date
     public var timeZone: TimeZone
     public var days: [LogicalDay]
-    /// Keys: work, sleep, kcal, protein, caffeine, nicotine, burn, steps.
+    /// Keys: work, sleep, kcal, protein, caffeine, nicotine, burn, steps, and
+    /// `custom.<key>` for your own metrics.
     public var metrics: [String: [Double?]]
+    /// Display names for custom metrics (`custom.weight` → "Weight (kg)").
+    public var metricNames: [String: String]
     /// Last caffeine instant per day (nil = no caffeine logged that day).
     public var lastCaffeine: [Date?]
     /// Whether anything was logged that day (separates "no caffeine" from "not logged").
@@ -20,12 +23,14 @@ public struct InsightContext: Sendable {
     public var plan: PlanFacts
 
     public init(today: LogicalDay, now: Date, timeZone: TimeZone, days: [LogicalDay], metrics: [String: [Double?]],
+                metricNames: [String: String] = [:],
                 lastCaffeine: [Date?], anyLogged: [Bool], sleepStarts: [Date], plan: PlanFacts) {
         self.today = today
         self.now = now
         self.timeZone = timeZone
         self.days = days
         self.metrics = metrics
+        self.metricNames = metricNames
         self.lastCaffeine = lastCaffeine
         self.anyLogged = anyLogged
         self.sleepStarts = sleepStarts

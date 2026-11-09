@@ -51,8 +51,15 @@ extension LogStore {
                 .filter { $0.status != .skipped }
                 .reduce(0) { $0 + $1.minutes }
 
+            // Custom metrics join the unusual-day detector under their own names.
+            var allMetrics = metrics
+            var names: [String: String] = [:]
+            for def in r.customDefinitions {
+                allMetrics["custom.\(def.key)"] = r.days.map { r.custom[def.key]?[$0] }
+                names["custom.\(def.key)"] = def.unit.isEmpty ? def.name : "\(def.name) (\(def.unit))"
+            }
             return InsightContext(
-                today: today, now: now, timeZone: tz, days: r.days, metrics: metrics,
+                today: today, now: now, timeZone: tz, days: r.days, metrics: allMetrics, metricNames: names,
                 lastCaffeine: r.days.map { lastByDay[$0] }, anyLogged: r.facts.map { !$0.isEmpty },
                 sleepStarts: sleepStarts,
                 plan: PlanFacts(startDrifts: drifts, estimateRatios: ratios,

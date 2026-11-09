@@ -114,6 +114,17 @@ public struct QuickEntry: Sendable {
             return out
         }
 
+        // A custom metric you defined: "weight 71.2", "mood: 4", "water 500ml".
+        if let m = text.wholeMatch(of: /([A-Za-z][A-Za-z _\-]*?)\s*[:=]?\s*(~?)(\d+(?:[.,]\d+)?)\s*([A-Za-z%]*)/),
+           let def = try store.customMetric(named: String(m.1).trimmingCharacters(in: .whitespaces)),
+           let value = Double(String(m.3).replacingOccurrences(of: ",", with: ".")) {
+            out.lines = [PreviewLine(kind: "metric", title: def.name,
+                                     detail: "\(NutritionFormat.number(value))\(def.unit.isEmpty ? "" : " \(def.unit)")\(m.2.isEmpty ? "" : " (estimate)")")]
+            out.action = .insert(blocks: [], foods: [], samples: [store.metricSampleRow(metricID: def.id, value: value, day: today,
+                                                                                         isEstimate: !m.2.isEmpty, rawText: text)], newFoods: [])
+            return out
+        }
+
         if lower == "copy yesterday" {
             let n = try store.foodCount(on: today.previous)
             guard n > 0 else {

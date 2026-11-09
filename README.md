@@ -13,7 +13,7 @@
 
 <br/>
 
-![Status](https://img.shields.io/badge/status-M9%20AI%20recap-BF5AF2?style=flat-square)
+![Status](https://img.shields.io/badge/status-M10%20everywhere-BF5AF2?style=flat-square)
 ![Platform](https://img.shields.io/badge/macOS-27-1D1D1F?style=flat-square&logo=apple&logoColor=white)
 ![Swift](https://img.shields.io/badge/Swift-6.4-F05138?style=flat-square&logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-5E5CE6?style=flat-square)
@@ -206,7 +206,7 @@ logbook/
 | 🟡 | **M7 · Proactive** | Built: 10 deterministic insight detectors with data gates, false-discovery control and "why am I seeing this"; insight cards with dismiss/snooze; weekly Review; local notifications with caps, quiet rules and back-off. Not yet: missed-log and morning-plan nudges |
 | 🟡 | **M8 · Polish** | Built: app icon, ⌘K command palette, Go/Timer menus with shortcuts, first-run welcome, VoiceOver chart descriptions, Reduce Motion, open at login, iCloud Drive backup mirror (plus backups/export from M4) |
 | 🟡 | **M9 · AI recap** | Built: on-device (Foundation Models) recap in Close the day and Review; the model writes only a headline and sentence openings, Swift inserts every number; validated, with template fallback |
-| ⬜️ | **M10 · Everywhere on the Mac** | Shortcuts and Spotlight actions, launch at login, custom metrics UI |
+| 🟡 | **M10 · Everywhere on the Mac** | Built: Shortcuts/Spotlight/Siri actions (log anything, start/stop timers, add task, log food, today so far), open at login, custom metrics (define, log by name, charts, baselines, insights) |
 | 💭 | **Later** | Widgets · iPhone/Watch quick log · Health import · iCloud sync |
 
 ## Principles

@@ -76,6 +76,9 @@ public struct QuickEntryField: View {
         case "steps": "figure.walk"
         case "timer": "timer"
         case "dictionary": "book"
+        case "metric": "slider.horizontal.3"
+        case "task": "checklist"
+        case "plan": "calendar.badge.clock"
         default: "circle"
         }
     }

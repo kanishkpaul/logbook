@@ -143,3 +143,22 @@ import Testing
         #expect(try q.interpret("$ 6h 30m").problem?.contains("computed") == true)
     }
 }
+
+@Suite struct QuickEntryCustomMetricTests {
+    static let tz = TimeZone(identifier: "Asia/Kolkata")!
+
+    @Test func logsYourOwnMetricsByName() throws {
+        let now = Calendar.gregorian(in: Self.tz).date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 8))!
+        let q = QuickEntry(store: LogStore(database: try AppDatabase.openInMemory(), now: { now }, timeZone: { Self.tz }))
+        try q.store.addMetric(name: "Weight", unit: "kg")
+        try q.store.addMetric(name: "Mood", aggregation: .avg)
+        let i = try q.interpret("weight 71.2")
+        #expect(i.lines == [.init(kind: "metric", title: "Weight", detail: "71.2 kg")])
+        try q.commit(i)
+        #expect(try q.interpret("mood: 4").lines.first?.title == "Mood")
+        #expect(try q.interpret("Weight ~71,5").lines.first?.detail == "71.5 kg (estimate)")
+        #expect(try q.interpret("height 180").lines.first?.kind == "food", "not a metric you defined: stays food")
+        let sample = try #require(try q.store.snapshot(of: LogicalDay("2026-11-09")!, in: Self.tz).samples.first)
+        #expect(sample.key == "weight" && sample.sample.value == 71.2)
+    }
+}

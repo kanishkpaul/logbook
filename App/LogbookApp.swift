@@ -1,3 +1,4 @@
+import AppIntents
 import AppKit
 import LogbookCore
 import LogbookPersistence
@@ -97,6 +98,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             exit(1)
         }
         self.store = store
+        // Shortcuts and Spotlight actions write through the same store.
+        AppDependencyManager.shared.add(dependency: store)
         today = TodayModel(store: store)
         dictionary = DictionaryModel(store: store)
         data = DataModel(store: store)

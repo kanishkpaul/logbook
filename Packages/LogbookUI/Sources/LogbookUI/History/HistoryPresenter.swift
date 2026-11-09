@@ -85,8 +85,14 @@ public struct HistoryPresenter {
         DayBoundary.calendarDay.start(of: day, in: timeZone).addingTimeInterval(12 * 3600)
     }
 
+    /// Per-day values of a metric over the range (built-in or your own).
+    func values(_ spec: MetricSpec, _ r: RangeSnapshot) -> [Double?] {
+        if let key = spec.customKey { return r.days.map { r.custom[key]?[$0] } }
+        return r.facts.map { spec.value($0) }
+    }
+
     public func series(_ spec: MetricSpec, _ r: RangeSnapshot) -> SeriesState {
-        let values = r.facts.map { spec.value($0) }
+        let values = values(spec, r)
         let rolling = Stats.rollingMean(values)
         let points = r.facts.enumerated().map { i, f in
             SeriesState.Point(day: f.logicalDay, date: noon(f.logicalDay), value: values[i], rolling: rolling[i])
@@ -152,8 +158,8 @@ public struct HistoryPresenter {
 
     /// `x` against `y`, optionally `y` on the next day (e.g. caffeine → next sleep).
     public func compare(_ x: MetricSpec, _ y: MetricSpec, _ r: RangeSnapshot, nextDay: Bool) -> ComparisonState {
-        let xs = r.facts.map { x.value($0) }
-        var ys = r.facts.map { y.value($0) }
+        let xs = values(x, r)
+        var ys = values(y, r)
         if nextDay { ys = Array(ys.dropFirst()) + [nil] }
         let points = zip(r.facts, zip(xs, ys)).compactMap { f, pair -> ComparisonState.Point? in
             guard let a = pair.0, let b = pair.1 else { return nil }
