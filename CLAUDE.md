@@ -5,12 +5,12 @@ Private, single-user native macOS logbook (work blocks, food with kcal/protein/c
 **Read first:** `docs/MASTER_PLAN.md` (what we're building and in what order) and `docs/research/stack-and-architecture-report.md` (why).
 
 ## Status
-M3 daily driver and M4 food built, plus backups/export pulled forward from M8: daily `VACUUM INTO` snapshots (keep 30) in `<data>/Backups`, JSON export that restores exactly (round-trip tested), CSV export, Backups & Export screen, CLI `backup`/`export-json`/`export-csv`/`restore`. M4: meals (`meal x = a + b`), copy yesterday, favourites/recents quick-add, 7-day macro averages, caffeine/nicotine at usual bedtime (median sleep onset). M0 permission-survival checks still need the user's clicks. Decisions: calendar day (`DayBoundary.standard`); NC stores only the total; every `>` block is work; no targets (baselines only). Next: M5 charts & trends. Other open decisions are in master plan §16. Don't build past them without asking.
+M3 daily driver and M4 food built, plus backups/export pulled forward from M8: daily `VACUUM INTO` snapshots (keep 30) in `<data>/Backups`, JSON export that restores exactly (round-trip tested), CSV export, Backups & Export screen, CLI `backup`/`export-json`/`export-csv`/`restore`. M4: meals (`meal x = a + b`), copy yesterday, favourites/recents quick-add, 7-day macro averages, caffeine/nicotine at usual bedtime (median sleep onset). M0 permission-survival checks still need the user's clicks. Decisions: calendar day (`DayBoundary.standard`); NC stores only the total; every `>` block is work; no targets (baselines only). M5 charts & trends built: Calendar (day/week/month), Work, Sleep, Body, Trends; `HistoryPresenter`/`CalendarPresenter` are pure and tested; `Stats` in Core (rolling mean, typical range = IQR, correlation with n≥8, linear fit) and `DayPart` (per-day clipping for grids). Next: M6 Plan (tasks + time blocking) — check master plan §16 decision #8/#9 first. Other open decisions are in master plan §16. Don't build past them without asking.
 
 ## Commands
 - `make test` — `swift test` for Core, Persistence, Import and UI (fast; use this most).
 - New tables must be added to `DataExport.restoreOrder` (parents before children) so JSON restore satisfies foreign keys.
-- `make render` — renders key views on synthetic data to `build/shots/*.png` (ImageRenderer can't draw AppKit text fields/forms; those show as blanks).
+- `make render` — renders key views on synthetic data to `build/shots/*.png` (ImageRenderer can't draw AppKit text fields/forms/buttons; those show as blanks). Prefer this to screen captures: the user's desktop may show private apps.
 - `make demo DIR=/tmp/logbook-demo` — runs the app on a scratch data folder (`LOGBOOK_DATA_DIR`), never the real log. Seed it with `logbook-import apply … --db $DIR/logbook.sqlite`.
 - `make build` / `make run` — xcodebuild Debug into `build/DD`, then open.
 - `make format-check` — after every `xcrun xcodeproj` change.

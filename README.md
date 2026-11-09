@@ -13,7 +13,7 @@
 
 <br/>
 
-![Status](https://img.shields.io/badge/status-M4%20food-BF5AF2?style=flat-square)
+![Status](https://img.shields.io/badge/status-M5%20charts%20%26%20trends-BF5AF2?style=flat-square)
 ![Platform](https://img.shields.io/badge/macOS-27-1D1D1F?style=flat-square&logo=apple&logoColor=white)
 ![Swift](https://img.shields.io/badge/Swift-6.4-F05138?style=flat-square&logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-5E5CE6?style=flat-square)
@@ -201,7 +201,7 @@ logbook/
 | 🟡 | **M2 · Import history** | Importer built: preview, undo, food library seeding ([format](docs/IMPORT_FORMAT.md)). Waiting for the real logs |
 | 🟡 | **M3 · Daily driver** | Built: Today, Quick Entry (⌥Space), timers, menu bar, Close the day, food dictionary with macros + nicotine. Next: use it daily and retire Notes |
 | ⬜️ | **M4 · Food** | Library, favourites, meals, caffeine curve, protein tracking |
-| ⬜️ | **M5 · Charts & trends** | Calendar (actual layer), Work, Sleep, Body and Trends screens with baselines |
+| 🟡 | **M5 · Charts & trends** | Built: Calendar (day/week/month of what happened), Work (by label, deep work), Sleep (duration, windows, regularity), Body, Trends (any metric, metric vs metric with careful wording) |
 | ⬜️ | **M6 · Plan** | To-do lists, time-blocking calendar, templates, plan vs actual, Apple Calendar overlay |
 | ⬜️ | **M7 · Proactive** | Insight engine, capped notifications, weekly review |
 | ⬜️ | **M8 · Polish** | Design pass, motion, icon, keyboard, accessibility, backups |

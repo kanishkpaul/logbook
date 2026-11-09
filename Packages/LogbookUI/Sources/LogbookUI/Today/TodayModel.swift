@@ -45,10 +45,18 @@ public final class TodayModel {
         store.boundary.logicalDay(containing: store.now(), in: store.timeZone())
     }
 
+    /// Show a fixed day instead of today (the Calendar's day view). `nil` = follow today.
+    public var pinnedDay: LogicalDay? {
+        didSet {
+            guard pinnedDay != oldValue, observation != nil else { return }
+            observe(pinnedDay ?? currentDay)
+        }
+    }
+
     /// Starts observing (idempotent). Call once from the app.
     public func start() {
         guard observation == nil else { return }
-        observe(currentDay)
+        observe(pinnedDay ?? currentDay)
         ticker = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
@@ -80,7 +88,7 @@ public final class TodayModel {
     }
 
     private func tick() {
-        if let snapshot, snapshot.day != currentDay {
+        if pinnedDay == nil, let snapshot, snapshot.day != currentDay {
             observe(currentDay)
         } else {
             represent()

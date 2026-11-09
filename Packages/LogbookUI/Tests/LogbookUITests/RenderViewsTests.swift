@@ -46,4 +46,24 @@ struct RenderViewsTests {
         try render(QuickEntryField(model: model, text: "cig x2").padding(), "quick-entry-dictionary", width: 620)
         try render(QuickEntryField(model: model, text: "start sleep").padding(), "quick-entry-timer", width: 620)
     }
+
+    @Test func renderHistory() async throws {
+        let store = PreviewSupport.store()
+        let tz = TimeZone.current
+        let last = store.boundary.logicalDay(containing: Date(), in: tz)
+        let r = try store.range(last.adding(days: -27), through: last, in: tz)
+        let p = HistoryPresenter(timeZone: tz)
+        try render(VStack(alignment: .leading, spacing: 24) {
+            MetricChart(series: p.series(Metrics.work, r))
+            WorkByLabelChart(state: p.workByLabel(r))
+            MetricChart(series: p.series(Metrics.sleep, r))
+            SleepWindowChart(state: p.sleepWindows(r))
+            ComparisonChart(x: Metrics.work, y: Metrics.sleep, nextDay: false, state: p.compare(Metrics.work, Metrics.sleep, r, nextDay: false))
+        }.padding(), "history", width: 860)
+        let c = CalendarPresenter(timeZone: tz)
+        let ws = CalendarPresenter.weekStart(last)
+        try render(WeekGrid(week: c.week(try store.range(ws, through: ws.adding(days: 6), in: tz), today: last)).padding(), "week", width: 900)
+        let (f, l) = CalendarPresenter.monthBounds(last)
+        try render(MonthGrid(month: c.month(try store.range(f, through: l, in: tz), today: last)).padding(), "month", width: 900)
+    }
 }
