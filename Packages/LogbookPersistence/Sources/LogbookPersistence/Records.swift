@@ -304,6 +304,46 @@ public struct PlanTemplate: Hashable, Identifiable, Sendable {
     }
 }
 
+@Table("insight_memory")
+public struct InsightMemoryRecord: Hashable, Identifiable, Sendable {
+    public let id: UUID
+    @Column("detector_id") public var detectorID: String
+    @Column("detector_version") public var detectorVersion: Int
+    @Column("subject_key") public var subjectKey: String
+    @Column("last_shown_at") public var lastShownAt: Date?
+    @Column("times_shown") public var timesShown: Int = 0
+    @Column("times_dismissed") public var timesDismissed: Int = 0
+    @Column("snoozed_until") public var snoozedUntil: Date?
+    public var feedback: String?
+    @Column("dismissed_at") public var dismissedAt: Date?
+    @Column("dismissed_effect") public var dismissedEffect: Double?
+}
+
+@Table("notification_log")
+public struct NotificationLogEntry: Hashable, Identifiable, Sendable {
+    public let id: UUID
+    public var kind: String
+    /// Asked for by you (planned block, task due) — these don't count toward caps.
+    public var requested: Bool = false
+    @Column("fire_at") public var fireAt: Date
+    @Column("delivered_at") public var deliveredAt: Date?
+    @Column("acted_at") public var actedAt: Date?
+    public var action: String?
+    @Column("created_at") public var createdAt: Date
+
+    public init(id: UUID, kind: String, requested: Bool = false, fireAt: Date, deliveredAt: Date? = nil,
+                actedAt: Date? = nil, action: String? = nil, createdAt: Date) {
+        self.id = id
+        self.kind = kind
+        self.requested = requested
+        self.fireAt = fireAt
+        self.deliveredAt = deliveredAt
+        self.actedAt = actedAt
+        self.action = action
+        self.createdAt = createdAt
+    }
+}
+
 @Table("change_log")
 public struct ChangeLogEntry: Hashable, Identifiable, Sendable {
     public let id: UUID

@@ -87,7 +87,7 @@ CREATE TABLE "insight_memory" (
   "times_dismissed" INTEGER NOT NULL DEFAULT 0,
   "snoozed_until" TEXT,
   "feedback" TEXT
-) STRICT;
+, "dismissed_at" TEXT, "dismissed_effect" REAL) STRICT;
 
 CREATE TABLE "meal" (
   "id" TEXT PRIMARY KEY NOT NULL,
@@ -135,6 +135,17 @@ CREATE TABLE "metric_sample" (
   "created_at" TEXT NOT NULL,
   "updated_at" TEXT NOT NULL,
   "deleted_at" TEXT
+) STRICT;
+
+CREATE TABLE "notification_log" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "kind" TEXT NOT NULL,
+  "requested" INTEGER NOT NULL DEFAULT 0,
+  "fire_at" TEXT NOT NULL,
+  "delivered_at" TEXT,
+  "acted_at" TEXT,
+  "action" TEXT,
+  "created_at" TEXT NOT NULL
 ) STRICT;
 
 CREATE TABLE "plan_block" (
@@ -230,6 +241,8 @@ CREATE INDEX "food_log_entry_logical_day" ON "food_log_entry"("logical_day");
 CREATE INDEX "meal_item_meal" ON "meal_item"("meal_id");
 
 CREATE INDEX "metric_sample_day" ON "metric_sample"("metric_id", "logical_day");
+
+CREATE INDEX "notification_log_kind" ON "notification_log"("kind", "fire_at");
 
 CREATE INDEX "plan_block_logical_day" ON "plan_block"("logical_day");
 

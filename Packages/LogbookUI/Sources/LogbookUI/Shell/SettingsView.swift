@@ -26,6 +26,20 @@ public struct SettingsView: View {
                 Text("Simple decay models for a rough “how much is still in me”. Not medical advice.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section {
+                ForEach(NotificationKind.allCases) { kind in
+                    Toggle(kind.title, isOn: Binding(
+                        get: { model.enabledNotifications.contains(kind) },
+                        set: { on in
+                            if on { model.enabledNotifications.insert(kind) } else { model.enabledNotifications.remove(kind) }
+                        }
+                    ))
+                }
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("At most 2 a day that you didn't ask for (close the day, caffeine cutoff, insight, weekly review). None during your usual sleep or a running sleep timer. A kind you ignore three times in a row drops to every other day.")
+            }
             Section("Quick Entry") {
                 LabeledContent("Global shortcut", value: quickEntryShortcut)
                 LabeledContent("In the app", value: "⌘ L")

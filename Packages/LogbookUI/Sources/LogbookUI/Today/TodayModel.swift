@@ -22,10 +22,19 @@ public final class TodayModel {
     public private(set) var quickAdd: [String] = []
     /// Food entries logged yesterday (for "Copy yesterday").
     public private(set) var yesterdayFoodCount = 0
+    /// Up to three insight cards (deterministic; see LogbookCore/Detectors).
+    public private(set) var insights: [Insight] = []
+    @ObservationIgnored private var insightsComputedAt: Date?
+    @ObservationIgnored public var engine = InsightEngine()
 
     public var caffeineHalfLifeHours: Double {
         didSet { UserDefaults.standard.set(caffeineHalfLifeHours, forKey: "caffeineHalfLifeHours"); represent() }
     }
+    /// Which notification kinds are on (all on by default).
+    public var enabledNotifications: Set<NotificationKind> {
+        didSet { UserDefaults.standard.set(enabledNotifications.map(\.rawValue), forKey: "enabledNotifications") }
+    }
+
     public var nicotineHalfLifeHours: Double {
         didSet { UserDefaults.standard.set(nicotineHalfLifeHours, forKey: "nicotineHalfLifeHours"); represent() }
     }
@@ -39,6 +48,8 @@ public final class TodayModel {
         let d = UserDefaults.standard
         caffeineHalfLifeHours = d.object(forKey: "caffeineHalfLifeHours") as? Double ?? 5
         nicotineHalfLifeHours = d.object(forKey: "nicotineHalfLifeHours") as? Double ?? 2
+        enabledNotifications = (d.array(forKey: "enabledNotifications") as? [String]).map { Set($0.compactMap(NotificationKind.init)) }
+            ?? Set(NotificationKind.allCases)
     }
 
     public var currentDay: LogicalDay {
@@ -105,6 +116,38 @@ public final class TodayModel {
         state = presenter.present(snapshot, now: store.now())
         quickAdd = (try? store.quickAddNames()) ?? []
         yesterdayFoodCount = (try? store.foodCount(on: snapshot.day.previous)) ?? 0
+        refreshInsights()
+    }
+
+    /// Recomputes insight cards at most once a minute (the engine runs
+    /// permutation tests, so not on every 30-second tick).
+    public func refreshInsights(force: Bool = false) {
+        guard pinnedDay == nil else { return }
+        let now = store.now()
+        if !force, let last = insightsComputedAt, now.timeIntervalSince(last) < 60 { return }
+        insightsComputedAt = now
+        do {
+            let context = try store.insightContext()
+            insights = engine.run(context, memory: try store.insightMemory())
+            try store.markShown(insights)
+        } catch {
+            lastError = "Insights: \(error)"
+        }
+    }
+
+    public func dismissInsight(_ insight: Insight) {
+        run { try store.dismiss(insight) }
+        refreshInsights(force: true)
+    }
+
+    public func snoozeInsight(_ insight: Insight) {
+        run { try store.snooze(insight, days: 7) }
+        refreshInsights(force: true)
+    }
+
+    public func insightFeedback(_ insight: Insight, _ value: String) {
+        run { try store.feedback(insight, value) }
+        if value == "wrong" { refreshInsights(force: true) }
     }
 
     // MARK: Actions
@@ -177,6 +220,19 @@ public final class TodayModel {
     public func stampTomorrow(_ templateID: UUID) {
         run { try store.stamp(templateID: templateID, on: (snapshot?.day ?? currentDay).next) }
         lastConfirmation = "Planned tomorrow"
+    }
+
+    /// Everything the notification planner needs, read now.
+    public func notificationInputs() throws -> NotificationInputs? {
+        guard let snapshot, pinnedDay == nil else { return nil }
+        let tz = store.timeZone(), now = store.now()
+        let tomorrow = try store.snapshot(of: snapshot.day.next, in: tz)
+        let due = try store.taskRows().map(\.task).filter {
+            $0.status == .open && ($0.dueDay == snapshot.day || $0.dueDay == snapshot.day.next)
+        }
+        return NotificationInputs(now: now, timeZone: tz, today: snapshot, tomorrowPlans: tomorrow.plans, dueTasks: due,
+                                  insights: insights, log: try store.notificationLog(since: now.addingTimeInterval(-14 * 86_400)),
+                                  enabled: enabledNotifications)
     }
 
     /// Live preview for Quick Entry text.

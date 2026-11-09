@@ -4,7 +4,7 @@ import SwiftUI
 /// The main window: a sidebar of screens. More screens arrive in later milestones.
 public struct RootView<Diagnostics: View>: View {
     public enum Screen: String, Hashable, CaseIterable {
-        case today, calendar, tasks, work, sleep, body, trends, dictionary, importing, data, diagnostics
+        case today, calendar, tasks, work, sleep, body, trends, review, dictionary, importing, data, diagnostics
 
         var title: String {
             switch self {
@@ -15,6 +15,7 @@ public struct RootView<Diagnostics: View>: View {
             case .sleep: "Sleep"
             case .body: "Body"
             case .trends: "Trends"
+            case .review: "Review"
             case .dictionary: "Dictionary"
             case .importing: "Import"
             case .data: "Backups & Export"
@@ -31,6 +32,7 @@ public struct RootView<Diagnostics: View>: View {
             case .sleep: Domain.sleep.symbol
             case .body: "figure.walk"
             case .trends: "chart.xyaxis.line"
+            case .review: "doc.text.magnifyingglass"
             case .dictionary: "book"
             case .importing: "square.and.arrow.down"
             case .data: "externaldrive"
@@ -49,6 +51,7 @@ public struct RootView<Diagnostics: View>: View {
     @State private var sleepHistory: HistoryModel
     @State private var bodyHistory: HistoryModel
     @State private var trendsHistory: HistoryModel
+    @State private var review: ReviewModel
     /// Reopens on the screen you last used.
     @AppStorage("selectedScreen") private var screen: Screen = .today
 
@@ -66,6 +69,7 @@ public struct RootView<Diagnostics: View>: View {
         _sleepHistory = State(initialValue: HistoryModel(store: today.store))
         _bodyHistory = State(initialValue: HistoryModel(store: today.store))
         _trendsHistory = State(initialValue: HistoryModel(store: today.store, range: .quarter))
+        _review = State(initialValue: ReviewModel(store: today.store))
         self.diagnostics = diagnostics()
     }
 
@@ -76,7 +80,7 @@ public struct RootView<Diagnostics: View>: View {
                     ForEach([Screen.today, .tasks, .calendar], id: \.self) { Label($0.title, systemImage: $0.symbol) }
                 }
                 Section("History") {
-                    ForEach([Screen.work, .sleep, .body, .trends], id: \.self) { Label($0.title, systemImage: $0.symbol) }
+                    ForEach([Screen.review, .work, .sleep, .body, .trends], id: \.self) { Label($0.title, systemImage: $0.symbol) }
                 }
                 Section("Library") {
                     ForEach([Screen.dictionary, .importing, .data, .diagnostics], id: \.self) { Label($0.title, systemImage: $0.symbol) }
@@ -92,6 +96,7 @@ public struct RootView<Diagnostics: View>: View {
             case .sleep: SleepView(model: sleepHistory)
             case .body: BodyView(model: bodyHistory)
             case .trends: TrendsView(model: trendsHistory)
+            case .review: ReviewView(model: review, insights: today.insights)
             case .dictionary: DictionaryView(model: dictionary)
             case .importing: ImportView(store: today.store)
             case .data: DataView(model: data)

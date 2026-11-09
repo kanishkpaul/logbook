@@ -22,6 +22,7 @@ public enum Schema {
         migrator.registerMigration("v3: macros and nicotine", migrate: v3MacrosAndNicotine)
         migrator.registerMigration("v4: meals", migrate: v4Meals)
         migrator.registerMigration("v5: plan", migrate: v5Plan)
+        migrator.registerMigration("v6: insights and notifications", migrate: v6Proactive)
         return migrator
     }
 
@@ -519,6 +520,29 @@ public enum Schema {
         for table in ["time_block", "task", "plan_block"] {
             try installChangeLogTriggers(db, table: table)
         }
+    }
+
+    // MARK: v6
+
+    /// Insight dismissals (so a dismissed card stays away unless it grows) and a
+    /// log of notifications (for daily caps and backing off when ignored).
+    static func v6Proactive(_ db: Database) throws {
+        try db.execute(sql: """
+            ALTER TABLE "insight_memory" ADD COLUMN "dismissed_at" TEXT;
+            ALTER TABLE "insight_memory" ADD COLUMN "dismissed_effect" REAL;
+
+            CREATE TABLE "notification_log" (
+              "id" TEXT PRIMARY KEY NOT NULL,
+              "kind" TEXT NOT NULL,
+              "requested" INTEGER NOT NULL DEFAULT 0,
+              "fire_at" TEXT NOT NULL,
+              "delivered_at" TEXT,
+              "acted_at" TEXT,
+              "action" TEXT,
+              "created_at" TEXT NOT NULL
+            ) STRICT;
+            CREATE INDEX "notification_log_kind" ON "notification_log"("kind", "fire_at");
+            """)
     }
 
     // MARK: Change log

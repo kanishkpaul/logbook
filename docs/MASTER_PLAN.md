@@ -217,7 +217,7 @@ Recurrence uses a subset of the iCalendar RRULE format, so it is standard and ea
 
 ## 10. Proactive layer
 
-### 10a. Insight engine (deterministic Swift; no AI needed)
+### 10a. Insight engine (deterministic Swift; no AI needed) — built 9 Nov 2026
 Each insight is a pluggable **detector** with a minimum-data gate, an effect size, a confidence level and a "why am I seeing this" explanation.
 
 | Detector | Example | Needs |
@@ -236,10 +236,10 @@ Each insight is a pluggable **detector** with a minimum-data gate, an effect siz
 
 Statistical safeguards: "not logged" ≠ zero; estimates down-weighted; false-discovery control on correlations; wording is always "on days when…", never "causes"; no medical claims.
 
-### 10b. Notifications (local, all controllable)
+### 10b. Notifications (local, all controllable) — built 9 Nov 2026 except missed-log and morning-plan
 | Notification | When | Level |
 |---|---|---|
-| Forgotten timer | Block running far past normal | Time Sensitive (only one allowed) |
+| Forgotten timer | Block running far past normal | Active (Time Sensitive needs a paid-account entitlement) |
 | Close the day | Your median sleep onset − 60 min | Active |
 | Caffeine cutoff | 30 min before your personal cutoff, only if you're still drinking | Active |
 | Missed log | A usual anchor (e.g. first work block) hasn't happened well past its usual time | Passive, max once/day |

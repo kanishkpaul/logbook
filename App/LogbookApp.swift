@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController?
     private var quickEntry: QuickEntryPanel?
     private var hotKey: GlobalHotKey?
+    private var notifications: NotificationScheduler?
     private var wakeObserver: NSObjectProtocol?
 
     override init() {
@@ -80,6 +81,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = StatusItemController(today: today, openMain: { [weak self] in self?.showMainWindow() })
         quickEntry = QuickEntryPanel(today: today)
         hotKey = GlobalHotKey { [weak self] in self?.toggleQuickEntry() }
+        let scheduler = NotificationScheduler(today: today)
+        scheduler.openMain = { [weak self] in self?.showMainWindow() }
+        scheduler.start()
+        notifications = scheduler
         diagnostics.quickEntryShortcut = quickEntryShortcut
 
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(

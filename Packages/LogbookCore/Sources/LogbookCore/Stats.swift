@@ -127,3 +127,67 @@ public struct DayPart: Hashable, Sendable {
         }
     }
 }
+
+// MARK: Robust statistics and tests for insights
+
+extension Stats {
+    public static func median(_ values: [Double]) -> Double? {
+        values.isEmpty ? nil : quantile(values.sorted(), 0.5)
+    }
+
+    /// Median absolute deviation (unscaled).
+    public static func mad(_ values: [Double]) -> Double? {
+        guard let m = median(values) else { return nil }
+        return median(values.map { abs($0 - m) })
+    }
+
+    /// Robust z-score of `x` against `baseline`: (x − median) / (1.4826 · MAD).
+    /// `nil` when the baseline has no spread.
+    public static func robustZ(_ x: Double, baseline: [Double]) -> Double? {
+        guard let m = median(baseline), let d = mad(baseline), d > 0 else { return nil }
+        return (x - m) / (1.4826 * d)
+    }
+
+    /// Two-sided permutation p-value for a difference in medians between `a`
+    /// and `b`. Deterministic for a given seed, so insights don't flicker.
+    public static func permutationPValue(_ a: [Double], _ b: [Double], iterations: Int = 2000, seed: UInt64 = 0x10_6B00) -> Double {
+        guard let ma = median(a), let mb = median(b) else { return 1 }
+        let observed = abs(ma - mb)
+        var pool = a + b
+        var rng = SeededRandom(seed: seed)
+        var extreme = 0
+        for _ in 0..<iterations {
+            pool.shuffle(using: &rng)
+            let x = Array(pool[..<a.count]), y = Array(pool[a.count...])
+            if abs(median(x)! - median(y)!) >= observed - 1e-9 { extreme += 1 }
+        }
+        return Double(extreme + 1) / Double(iterations + 1)
+    }
+
+    /// Benjamini–Hochberg: which of `pValues` survive at false-discovery rate `q`.
+    public static func benjaminiHochberg(_ pValues: [Double], q: Double = 0.1) -> [Bool] {
+        let m = pValues.count
+        guard m > 0 else { return [] }
+        let order = pValues.indices.sorted { pValues[$0] < pValues[$1] }
+        var cutoff = -1
+        for (rank, i) in order.enumerated() where pValues[i] <= Double(rank + 1) / Double(m) * q {
+            cutoff = rank
+        }
+        var keep = Array(repeating: false, count: m)
+        if cutoff >= 0 { for rank in 0...cutoff { keep[order[rank]] = true } }
+        return keep
+    }
+}
+
+/// SplitMix64: a tiny deterministic generator for permutation tests.
+public struct SeededRandom: RandomNumberGenerator, Sendable {
+    var state: UInt64
+    public init(seed: UInt64) { state = seed }
+    public mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
+    }
+}

@@ -21,6 +21,13 @@ public struct TodayView: View {
                         ForEach(state.heroes) { HeroCard(hero: $0) }
                     }
 
+                    if !model.insights.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Noticed").font(.headline)
+                            ForEach(model.insights) { InsightCard(insight: $0, model: model) }
+                        }
+                    }
+
                     GroupBox("Plan") {
                         PlanPanel(model: model, plan: state.plan).padding(4)
                     }

@@ -1,4 +1,5 @@
 import AppKit
+import LogbookCore
 import Foundation
 import SwiftUI
 import Testing
@@ -44,6 +45,23 @@ struct RenderViewsTests {
             PlanPanel(model: model, plan: state.plan)
             DayTrackChart(state: state)
         }.padding(), "today-plan", width: 860)
+        try render(InsightCard(insight: LogbookCore.Insight(
+            detectorID: "caffeine-sleep", detectorVersion: 1, subjectKey: "sleep", kind: .correlation,
+            title: "On days with caffeine after 19:05, you slept 48m less the next night",
+            explanation: ["x"], effect: 1, confidence: .moderate, pValue: 0.02, domain: "sleep"), model: model).padding(), "insight", width: 620)
+        let review = ReviewModel(store: model.store)
+        review.load()
+        if let r = review.state {
+            try render(VStack(alignment: .leading, spacing: 12) {
+                Text(r.title).font(.title2)
+                ForEach(r.sections) { sec in
+                    VStack(alignment: .leading) {
+                        Text(sec.title).font(.headline)
+                        ForEach(sec.lines, id: \.self) { Text($0) }
+                    }
+                }
+            }.padding(), "review", width: 760)
+        }
         try render(CloseDayView(model: model), "close-day", width: 520)
         try render(MenuBarPanel(model: model, openMain: {}, quit: {}), "menu-bar-panel", width: 460)
         try render(QuickEntryField(model: model, text: "paneer 200g - 530 / 36 / 0 / 0 / 2.4c / 40f").padding(), "quick-entry-new-food", width: 620)
