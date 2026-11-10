@@ -246,6 +246,10 @@ Open **Today** to add your first block, or try Quick Entry with `start study` an
 - 🔬 [Stack & architecture research](docs/research/stack-and-architecture-report.md): why Swift, SwiftUI and SQLite, with sources
 - 🗂 [Research notes](docs/research/notes/): persistence, Apple platform features, cross-platform alternatives, UX patterns, insight engine, engineering patterns, build tooling
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
 <div align="center">
 <br/>
 <sub>Built for a personal log that lives on your Mac.</sub>
