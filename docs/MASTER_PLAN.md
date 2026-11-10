@@ -62,7 +62,7 @@ Your current Notes format and where each line goes:
 | Table | Purpose | Key rules |
 |---|---|---|
 | `time_block` | Work, sleep, nature's call, and future custom kinds | Start/end stored as instants (UTC) plus time zone; `end = NULL` means a timer is running; `logical_day` fixed when written; optional `task_id` / `plan_block_id` link it to what was planned |
-| `category` | Work projects/tags (e.g. "project horizon", "study", "pocf") | Colour + SF Symbol per category |
+| `category` | Work projects/tags (e.g. "writing", "study", "coursework") | Colour + SF Symbol per category |
 | `food` | Your **dictionary** of everything you eat (and smoke): name, aliases, serving, kcal / protein / carbs / fat / caffeine / nicotine per serving | Editing the dictionary never changes past days |
 | `food_log_entry` | What you ate or smoked | Copies all six values at log time; quantity/multiplier; time consumed |
 | `metric_definition` / `metric_sample` | Steps, burn, and **any metric you add later** (weight, mood, water, gym sets…) | Typed, unit-aware, sum/avg/max/last aggregation |
@@ -179,7 +179,7 @@ Rules (from Apple's HIG): a plain-language headline above every chart, detail on
 Logging records what happened; planning decides what should happen. Both live on the same timeline, so every day can be read as **plan vs actual**.
 
 ### 9a. To-do lists
-- **Lists** (e.g. "project horizon", "exams", "personal"), each optionally tied to a work category so time spent on its tasks counts toward that category.
+- **Lists** (e.g. "writing", "exams", "personal"), each optionally tied to a work category so time spent on its tasks counts toward that category.
 - **Smart views:** Inbox, Today, Upcoming, Anytime, Someday, Done (a log of completed tasks).
 - **Task fields:** title, notes, list, tags, priority (none / ! / !!), due date (deadline), scheduled day (when you intend to do it), estimate (minutes), checklist / subtasks, recurrence (daily, weekly, custom, or "after completion"), status (open / done / dropped).
 - **Capture in your shorthand:** `t write SIH deck ~45m !! fri #horizon` → task, 45-min estimate, high priority, due Friday, in "horizon". Keyboard-first: ⌘N new, Space to complete, ⌘→ move to tomorrow, drag to reorder.
@@ -292,7 +292,7 @@ logbook/
     LogbookPersistence/         schema, migrations, queries, daily_facts, backup/export
     LogbookImport/              shorthand parser, import plan, `logbook-import` CLI
     LogbookUI/                  design system + feature views with #Preview
-  Fixtures/                     real log snippets for golden tests
+  Fixtures/                     synthetic log snippets for golden tests
   Makefile                      build · run · test · install · screenshot
   CLAUDE.md                     commands, module map, rules for AI changes
   MASTER_PLAN.md                this file
@@ -340,7 +340,7 @@ Each milestone ends with a working app you can use daily.
 3. **What counts as "work":** today every `>` block counts (study, exams, calls, misc). Keep that, or tag some as non-work?
 4. **Targets:** set any now (protein g, caffeine cap mg, work hours, sleep hours, bedtime), or leave them unset and let baselines do the work?
 5. ~~**NC sub-durations**~~ — decided 9 Nov 2026: only the total (start → end) is stored; the parts stay in `raw_text`.
-6. ~~**Project folder**~~ — decided: `~/Downloads/GitHub/logbook`, repo `kanishkpaul/logbook` (private).
+6. ~~**Project folder**~~ — decided: `kanishkpaul/logbook`.
 7. **Paid Apple account:** confirm "not now" (everything up to M10 works without it).
 8. **Existing to-dos and calendar:** where do your tasks and plans live today (Apple Reminders, Apple Calendar, Things, Notion, paper)? Import once, keep reading them, or start fresh?
 9. **Apple Calendar overlay:** show your Apple Calendar events read-only on the Calendar, yes or no?

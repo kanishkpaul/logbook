@@ -31,7 +31,7 @@
 Every day gets logged by hand: work blocks, what was eaten (with calories, protein and caffeine), calories burnt, nature's-call blocks and sleep. In Notes that means typing totals by hand and never seeing the patterns. **logbook** keeps the same fast shorthand, then does the arithmetic, draws the trends and speaks up when something is worth noticing.
 
 > [!NOTE]
-> This is a personal app for one person on one Mac. It is not distributed, has no accounts, no server and no telemetry. Everything stays on the machine.
+> Logbook is a single-user app with no accounts, server or telemetry. It stores logs on your Mac, with an optional iCloud Drive backup mirror.
 
 ## What it logs
 
@@ -233,8 +233,12 @@ make run       # build and open
 make test      # swift test for every package
 make install   # Release build to /Applications/Logbook.app
 make format-check  # project.xcproj is in canonical form
-make import-preview FILE=data/notes.md   # then import-apply; see docs/IMPORT_FORMAT.md
+make import-preview FILE=path/to/notes.md  # preview before importing
 ```
+
+To try the app with a scratch database, use `make demo DIR="$(mktemp -d)"`. This closes any running Logbook instance first.
+
+Open **Today** to add your first block, or try Quick Entry with `start study` and `stop`. The [import guide](docs/IMPORT_FORMAT.md) explains how to bring in an existing Notes log.
 
 ## Docs
 
@@ -244,5 +248,5 @@ make import-preview FILE=data/notes.md   # then import-apply; see docs/IMPORT_FO
 
 <div align="center">
 <br/>
-<sub>Built for one person, with care. Private, local, and entirely mine.</sub>
+<sub>Built for a personal log that lives on your Mac.</sub>
 </div>

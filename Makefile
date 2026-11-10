@@ -15,10 +15,10 @@ PACKAGES := LogbookCore LogbookPersistence LogbookImport LogbookUI
 .PHONY: icon build release run stop test test-core test-persistence test-import test-ui render demo format-check schema install spike-status import-preview import-apply import-batches clean
 
 build:
-	$(XCB) -configuration Debug build | grep -E 'error|warning: |BUILD' || true
+	$(XCB) -configuration Debug -quiet build
 
 release:
-	$(XCB) -configuration Release build | grep -E 'error|warning: |BUILD' || true
+	$(XCB) -configuration Release -quiet build
 
 run: build stop
 	open -n $(APP)

@@ -1,6 +1,6 @@
 # logbook — notes for Claude
 
-Private, single-user native macOS logbook (work blocks, food with kcal/protein/caffeine, burn/steps, nature's-call blocks, sleep) with to-do lists and a time-blocking calendar (plan vs actual). Personal use only; never distributed.
+Local-first, single-user native macOS logbook (work blocks, food with kcal/protein/caffeine, burn/steps, nature's-call blocks, sleep) with to-do lists and a time-blocking calendar (plan vs actual).
 
 **Read first:** `docs/MASTER_PLAN.md` (what we're building and in what order) and `docs/research/stack-and-architecture-report.md` (why).
 

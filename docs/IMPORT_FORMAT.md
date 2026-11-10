@@ -11,13 +11,13 @@ swift run --package-path Packages/LogbookImport logbook-import batches
 
 Options: `--year 2026` (year for headers without one; default: this year), `--tz Asia/Kolkata` (zone the times were written in; default: this Mac's), `--db path/to/logbook.sqlite` (default: the live database). Keep real log files out of the repo (`/data/` is git-ignored).
 
-## Example
+## Synthetic example
 
 ```text
-## Fri 10 Oct 2026
+## Sat 10 Oct 2026
 
 0100 - 0330 [2h 30m] > study + exam
-0945 - 1045 [1h] > project horizon
+0945 - 1045 [1h] > writing
 $ 3h 30m
 
 pulao 250g - 408 / 8 / 0
@@ -71,7 +71,7 @@ After the last ` - ` on a food line (or after `$`):
 | `meal breakfast = coffee + 2 eggs + toast 2 slices` | saves a meal (every item must be in the dictionary); redefining replaces it |
 | `breakfast` · `breakfast x2` | logs every item of the meal |
 | `2 eggs` · `egg x2` | counts; `eggs` and `egg` match the same dictionary entry |
-| `t write SIH deck ~45m !! fri #horizon` | a task: `~` estimate, `!`/`!!` priority, a day or date = due, `@day` = scheduled, `@someday`, `#list` |
+| `t draft outline ~45m !! fri #writing` | a task: `~` estimate, `!`/`!!` priority, a day or date = due, `@day` = scheduled, `@someday`, `#list` |
 | `t standup every weekday` · `t gym every mon,wed,fri` · `t water plants after 3 days` | repeating tasks (the next one appears when you complete it) |
 | `weight 71.2` · `mood: 4` · `water 500` | one of your own metrics (define it first under Library › Metrics) |
 | `plan 1400-1600 deep work` · `plan tomorrow gym 1800-1900` · `plan sleep 0100-0900` | a planned block (kinds: work, sleep, nc, break, gym; sleep after midnight means the coming night) |

@@ -96,7 +96,7 @@ Logbook/
     LogbookPersistence/       schema, migrations, queries, backup/export
     LogbookImport/            parser + ImportPlan, and `logbook-import` executable
     LogbookUI/                feature views with #Preview (MainActor default isolation)
-  Fixtures/                   anonymised snippets of the real Notes logs (golden tests)
+  Fixtures/                   synthetic Notes-format snippets (golden tests)
   scripts/ or Makefile        build, run, test, screenshot, install
   CLAUDE.md (+ AGENTS.md symlink)
 ```

@@ -4,8 +4,8 @@
 
 ```
 0930 - 1100 [1h 30m] > study
-1400 - 1630 [2h 30m] > project horizon
-2250 - 0000 [1h 10m] > pocf
+1400 - 1630 [2h 30m] > writing
+2250 - 0000 [1h 10m] > coursework
 $ 5h 10m
 
 pulao 250g - 408 / 8 / 0
